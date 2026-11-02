@@ -2,11 +2,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/cliente_api.dart';
 import '../../core/api/modelos.dart';
+import '../../core/cache.dart';
 import '../../core/formato.dart';
 import 'modelos_gerencia.dart';
 
-List<Map<String, dynamic>> _lista(dynamic datos) =>
-    [for (final item in (datos as List)) Map<String, dynamic>.from(item as Map)];
+List<Map<String, dynamic>> _lista(dynamic datos) => [
+  for (final item in (datos as List)) Map<String, dynamic>.from(item as Map),
+];
 
 Map<String, dynamic> _objeto(dynamic datos) => Map<String, dynamic>.from(datos as Map);
 
@@ -35,12 +37,16 @@ class ApiGerencia {
   Future<void> resolverCompra(int id, {required bool aceptar}) =>
       _api.post('/compras/$id/resolver', datos: {'decision': aceptar ? 'aceptar' : 'descartar'});
 
-  Future<List<HoraExtra>> horasExtra({EstadoHoraExtra? estado, DateTime? desde, DateTime? hasta}) async =>
-      _lista(await _api.get('/horas-extra', parametros: {
+  Future<List<HoraExtra>> horasExtra({EstadoHoraExtra? estado, DateTime? desde, DateTime? hasta}) async => _lista(
+    await _api.get(
+      '/horas-extra',
+      parametros: {
         if (estado != null) 'estado': estado.name,
         if (desde != null) 'desde': fechaApi(desde),
         if (hasta != null) 'hasta': fechaApi(hasta),
-      })).map(HoraExtra.fromJson).toList();
+      },
+    ),
+  ).map(HoraExtra.fromJson).toList();
 
   Future<void> aprobarHoraExtra(int id) => _api.post('/horas-extra/$id/aprobar');
 
@@ -51,19 +57,19 @@ class ApiGerencia {
     required List<int> usuarios,
     required List<DateTime> fechas,
     required String horaFin,
-  }) =>
-      _api.post('/horas-extra/programar', datos: {
-        'usuario_ids': usuarios,
-        'fechas': [for (final f in fechas) fechaApi(f)],
-        'hora_fin': horaFin,
-      });
+  }) => _api.post(
+    '/horas-extra/programar',
+    datos: {
+      'usuario_ids': usuarios,
+      'fechas': [for (final f in fechas) fechaApi(f)],
+      'hora_fin': horaFin,
+    },
+  );
 
   /// Personas con horario: operarios y transportistas.
-  Future<List<HorarioPersona>> horarios() async => _lista(await _api.get('/horarios'))
-      .map(HorarioPersona.fromJson)
-      .where((h) => h.rol.tieneJornada)
-      .toList()
-    ..sort((a, b) => a.nombre.compareTo(b.nombre));
+  Future<List<HorarioPersona>> horarios() async =>
+      _lista(await _api.get('/horarios')).map(HorarioPersona.fromJson).where((h) => h.rol.tieneJornada).toList()
+        ..sort((a, b) => a.nombre.compareTo(b.nombre));
 
   Future<List<TransportistaEstado>> transportistas() async =>
       _lista(await _api.get('/logistica/transportistas')).map(TransportistaEstado.fromJson).toList();
@@ -85,6 +91,17 @@ class ApiGerencia {
     );
   }
 
+  /// Todo el catálogo con stock, costo y precio.
+  Future<List<ProductoInventario>> inventario() async =>
+      _lista(await _api.get('/productos')).map(ProductoInventario.fromJson).toList();
+
+  /// Lotes de un producto, los más recientes primero.
+  Future<List<Lote>> lotes(int productoId) async {
+    final lista = _lista(await _api.get('/lotes', parametros: {'producto_id': productoId})).map(Lote.fromJson).toList();
+    lista.sort((a, b) => (b.fechaRecepcion ?? DateTime(0)).compareTo(a.fechaRecepcion ?? DateTime(0)));
+    return lista;
+  }
+
   /// Consumo del mes en curso (lo que el backend da por defecto).
   Future<Consumo> consumo() async => Consumo.fromJson(_objeto(await _api.get('/energia/consumo')));
 
@@ -96,22 +113,30 @@ final apiGerenciaProvider = Provider<ApiGerencia>((ref) => ApiGerencia(ref.watch
 
 /// Panel de hoy.
 final panelProvider = FutureProvider.autoDispose((ref) {
+  cacheDeSesion(ref);
   final hoy = soloFecha(DateTime.now());
   return ref.watch(apiGerenciaProvider).panel(hoy, hoy);
 });
 
-final comprasSugeridasProvider =
-    FutureProvider.autoDispose((ref) => ref.watch(apiGerenciaProvider).compras('sugerida'));
+final comprasSugeridasProvider = FutureProvider.autoDispose((ref) {
+  cacheDeSesion(ref);
+  return ref.watch(apiGerenciaProvider).compras('sugerida');
+});
 
-final comprasConDiferenciasProvider =
-    FutureProvider.autoDispose((ref) => ref.watch(apiGerenciaProvider).compras('con_diferencias'));
+final comprasConDiferenciasProvider = FutureProvider.autoDispose((ref) {
+  cacheDeSesion(ref);
+  return ref.watch(apiGerenciaProvider).compras('con_diferencias');
+});
 
-final comprasAtrasadasProvider =
-    FutureProvider.autoDispose((ref) => ref.watch(apiGerenciaProvider).comprasAtrasadas());
+final comprasAtrasadasProvider = FutureProvider.autoDispose((ref) {
+  cacheDeSesion(ref);
+  return ref.watch(apiGerenciaProvider).comprasAtrasadas();
+});
 
-final horasExtraSolicitadasProvider = FutureProvider.autoDispose(
-  (ref) => ref.watch(apiGerenciaProvider).horasExtra(estado: EstadoHoraExtra.solicitada),
-);
+final horasExtraSolicitadasProvider = FutureProvider.autoDispose((ref) {
+  cacheDeSesion(ref);
+  return ref.watch(apiGerenciaProvider).horasExtra(estado: EstadoHoraExtra.solicitada);
+});
 
 /// Horas extra aprobadas de esta semana (lunes a domingo).
 final horasExtraSemanaProvider = FutureProvider.autoDispose((ref) {
@@ -123,16 +148,34 @@ final horasExtraSemanaProvider = FutureProvider.autoDispose((ref) {
 
 final horariosProvider = FutureProvider.autoDispose((ref) => ref.watch(apiGerenciaProvider).horarios());
 
-final transportistasProvider =
-    FutureProvider.autoDispose((ref) => ref.watch(apiGerenciaProvider).transportistas());
+final transportistasProvider = FutureProvider.autoDispose((ref) {
+  cacheDeSesion(ref);
+  return ref.watch(apiGerenciaProvider).transportistas();
+});
 
-final estadisticasProvider = FutureProvider.autoDispose
-    .family<Estadisticas, Periodo>((ref, periodo) => ref.watch(apiGerenciaProvider).estadisticas(periodo));
+final estadisticasProvider = FutureProvider.autoDispose.family<Estadisticas, Periodo>((ref, periodo) {
+  cacheDeSesion(ref);
+  return ref.watch(apiGerenciaProvider).estadisticas(periodo);
+});
 
-final consumoProvider = FutureProvider.autoDispose((ref) => ref.watch(apiGerenciaProvider).consumo());
+final consumoProvider = FutureProvider.autoDispose((ref) {
+  cacheDeSesion(ref);
+  return ref.watch(apiGerenciaProvider).consumo();
+});
 
-final alertasEnergiaProvider =
-    FutureProvider.autoDispose((ref) => ref.watch(apiGerenciaProvider).alertasEnergia());
+final alertasEnergiaProvider = FutureProvider.autoDispose((ref) {
+  cacheDeSesion(ref);
+  return ref.watch(apiGerenciaProvider).alertasEnergia();
+});
+
+final inventarioProvider = FutureProvider.autoDispose((ref) {
+  cacheDeSesion(ref);
+  return ref.watch(apiGerenciaProvider).inventario();
+});
+
+final lotesProvider = FutureProvider.autoDispose.family<List<Lote>, int>(
+  (ref, productoId) => ref.watch(apiGerenciaProvider).lotes(productoId),
+);
 
 /// Recarga lo que se ve en el panel y en aprobaciones.
 void recargarGerencia(WidgetRef ref) {

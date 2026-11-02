@@ -122,4 +122,45 @@ void main() {
     expect(horaCorta('19:30'), '19:30');
     expect(leerHora('nada'), isNull);
   });
+
+  group('Inventario', () {
+    ProductoInventario producto(String nombre, {int stock = 10, bool bajo = false, String cat = 'RAM', double costo = 100}) =>
+        ProductoInventario.fromJson({
+          'id': nombre.hashCode,
+          'sku': nombre,
+          'nombre': nombre,
+          'categoria': cat,
+          'costo': costo,
+          'precio': costo * 1.2,
+          'stock': stock,
+          'stock_minimo': 5,
+          'stock_bajo': bajo,
+          'activo': true,
+        });
+
+    final lista = [
+      producto('SSD 1 TB', stock: 3, bajo: true, cat: 'SSD'),
+      producto('ryzen 5', stock: 0, bajo: true, cat: 'CPU'),
+      producto('DDR5 16 GB', stock: 40, costo: 300),
+    ];
+
+    test('filtros: stock bajo no incluye agotados; agotados aparte; por categoría', () {
+      expect(filtrarInventario(lista, filtro: FiltroInventario.stockBajo).map((p) => p.nombre), ['SSD 1 TB']);
+      expect(filtrarInventario(lista, filtro: FiltroInventario.agotados).map((p) => p.nombre), ['ryzen 5']);
+      expect(filtrarInventario(lista, categoria: 'RAM').map((p) => p.nombre), ['DDR5 16 GB']);
+    });
+
+    test('orden por nombre (sin importar mayúsculas), menor stock y mayor valor', () {
+      expect(filtrarInventario(lista).map((p) => p.nombre), ['DDR5 16 GB', 'ryzen 5', 'SSD 1 TB']);
+      expect(filtrarInventario(lista, orden: OrdenInventario.menorStock).first.nombre, 'ryzen 5');
+      expect(filtrarInventario(lista, orden: OrdenInventario.mayorValor).first.nombre, 'DDR5 16 GB');
+    });
+
+    test('valor y margen', () {
+      final p = lista.last;
+      expect(p.valor, 12000);
+      expect(p.margen, closeTo(0.2, 1e-9));
+      expect(lista[1].agotado, isTrue);
+    });
+  });
 }

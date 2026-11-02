@@ -47,10 +47,15 @@ ErrorApi errorDesde(Object error) {
       if (detalle is Map && detalle['mensaje'] is String) {
         return ErrorApi(detalle['mensaje'] as String, codigo);
       }
-      if (detalle is List) return ErrorApi('Revisa los datos ingresados.', codigo);
+      if (detalle is List) {
+        return ErrorApi('Revisa los datos ingresados.', codigo);
+      }
     }
     if (codigo == 503) {
-      return ErrorApi('El servidor no está disponible por ahora. Inténtalo en un momento.', codigo);
+      return ErrorApi(
+        'El servidor no está disponible por ahora. Inténtalo en un momento.',
+        codigo,
+      );
     }
     final textoCodigo = codigo?.toString() ?? 'sin código';
     return ErrorApi('Ocurrió un error inesperado ($textoCodigo).', codigo);
@@ -62,25 +67,31 @@ ErrorApi errorDesde(Object error) {
 /// el servidor responde 401 (sesión vencida o cerrada).
 class ClienteApi {
   ClienteApi()
-      : _dio = Dio(
-          BaseOptions(
-            baseUrl: ConfigApi.baseUrl,
-            // El primer llamado a Vercel puede tardar un poco (arranque en frío).
-            connectTimeout: const Duration(seconds: 20),
-            receiveTimeout: const Duration(seconds: 30),
-            headers: {'Accept': 'application/json'},
-          ),
-        ) {
+    : _dio = Dio(
+        BaseOptions(
+          baseUrl: ConfigApi.baseUrl,
+          // El primer llamado a Vercel puede tardar un poco (arranque en frío).
+          connectTimeout: const Duration(seconds: 20),
+          receiveTimeout: const Duration(seconds: 30),
+          headers: {'Accept': 'application/json'},
+        ),
+      ) {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (opciones, manejador) {
           final actual = token;
-          if (actual != null) opciones.headers['Authorization'] = 'Bearer $actual';
+          // Una petición puede traer su propio token (p. ej. el aviso de salida).
+          if (actual != null && !opciones.headers.containsKey('Authorization')) {
+            opciones.headers['Authorization'] = 'Bearer $actual';
+          }
           manejador.next(opciones);
         },
         onError: (error, manejador) {
           final sinSesion = error.requestOptions.extra['sinSesion'] == true;
-          if (error.response?.statusCode == 401 && token != null && !sinSesion) {
+          // Solo cuenta si la petición iba con la sesión actual (no con una anterior).
+          final conSesionActual = token != null &&
+              error.requestOptions.headers['Authorization'] == 'Bearer $token';
+          if (error.response?.statusCode == 401 && conSesionActual && !sinSesion) {
             alNoAutorizado?.call();
           }
           manejador.next(error);
@@ -97,8 +108,6 @@ class ClienteApi {
   /// Se llama cuando el servidor dice que la sesión ya no sirve.
   void Function()? alNoAutorizado;
 
-  static get instancia => null;
-
   // ---- Métodos genéricos (los usarán las pantallas de las fases siguientes) ----
 
   Future<dynamic> get(String ruta, {Map<String, dynamic>? parametros}) async {
@@ -110,7 +119,11 @@ class ClienteApi {
     }
   }
 
-  Future<dynamic> post(String ruta, {Object? datos, Map<String, dynamic>? parametros}) async {
+  Future<dynamic> post(
+    String ruta, {
+    Object? datos,
+    Map<String, dynamic>? parametros,
+  }) async {
     try {
       final r = await _dio.post(ruta, data: datos, queryParameters: parametros);
       return r.data;
@@ -146,7 +159,9 @@ class ClienteApi {
     Map<String, dynamic>? parametros,
   }) async {
     try {
-      final formulario = FormData.fromMap({campo: MultipartFile.fromBytes(bytes, filename: nombre)});
+      final formulario = FormData.fromMap({
+        campo: MultipartFile.fromBytes(bytes, filename: nombre),
+      });
       final r = await _dio.post(
         ruta,
         data: formulario,
@@ -163,7 +178,10 @@ class ClienteApi {
   // ---- Sesión ----
 
   /// Login del personal. Devuelve la respuesta del servidor (token y usuario).
-  Future<Map<String, dynamic>> iniciarSesion(String usuario, String password) async {
+  Future<Map<String, dynamic>> iniciarSesion(
+    String usuario,
+    String password,
+  ) async {
     try {
       final r = await _dio.post(
         '/auth/login',
@@ -181,9 +199,35 @@ class ClienteApi {
     return Usuario.fromJson(Map<String, dynamic>.from(datos as Map));
   }
 
-  /// Cierra la jornada de hoy en el servidor (botón «salir»).
-  Future<void> salir() async {
-    await post('/auth/salir');
+  /// Cierra la jornada de hoy en el servidor (botón «salir»). Lleva su propio
+  /// [tokenSesion] para poder enviarse después de borrar la sesión del celular.
+  Future<void> salir(String tokenSesion) async {
+    try {
+      await _dio.post(
+        '/auth/salir',
+        options: Options(
+          headers: {'Authorization': 'Bearer $tokenSesion'},
+          extra: {'sinSesion': true},
+          sendTimeout: const Duration(seconds: 15),
+          receiveTimeout: const Duration(seconds: 15),
+        ),
+      );
+    } on DioException catch (e) {
+      throw errorDesde(e);
+    }
+  }
+
+  /// Despierta el servidor (Vercel apaga las funciones que no se usan). Se llama al
+  /// abrir la app para que el login no cargue con ese arranque. Nunca falla.
+  Future<void> despertar() async {
+    try {
+      await _dio.get(
+        '/salud',
+        options: Options(extra: {'sinSesion': true}, receiveTimeout: const Duration(seconds: 15)),
+      );
+    } catch (_) {
+      // Si no responde, el login lo intentará igual.
+    }
   }
 }
 

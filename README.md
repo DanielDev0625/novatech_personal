@@ -72,19 +72,20 @@ calcula desde la bodega.
 
 ## P4 · Gerente
 
-Pestañas: **Panel · Aprobar · Stats · Energía**.
+Pestañas: **Panel · Aprobar · Inventario · Stats · Energía**.
 
 | Pantalla | Qué hace |
 |---|---|
 | Panel del día | Pedidos hoy, % a tiempo, stock bajo y por aprobar. Avisos de mercancía atrasada, recepciones con diferencias, jornadas con salida no registrada y transportistas en ruta. Accesos a horas extra y energía. |
 | Aprobaciones | Con un toque: compras sugeridas (quedan / mínimo / sugerido), solicitudes de horas extra y recepciones con diferencias («Aceptar buenas» o «Descartar»). La aprobación es un registro interno, no se envía al proveedor. |
+| Inventario | Todo el catálogo: productos, unidades, valor en bodega (a costo) y stock bajo. Filtros con toques (stock bajo, agotados, categoría) y orden por nombre, menor stock o mayor valor. Al tocar un producto: stock, mínimo, costo, precio, margen y sus lotes con lo que queda de cada uno. |
 | Horas extra de la semana | Agregar personas, elegir días L–S y hora de fin. Quedan aprobadas, vencen el domingo a medianoche y no se copian a la semana siguiente. |
 | Estadísticas | Semana o mes: más vendido, ventas por categoría, entregas a tiempo (con tiempos por etapa) y stock bajo con reposiciones pendientes. |
 | Eficiencia energética | Consumo del mes, costo, CO₂, kWh por pedido, consumo por zona y alertas. |
 
 ## P4 · Administrador
 
-Pestañas: **Usuarios · Parámetros · Catálogo · Stats**.
+Pestañas: **Usuarios · Parámetros · Inventario · Catálogo · Stats**.
 
 | Pantalla | Qué hace |
 |---|---|
@@ -93,7 +94,31 @@ Pestañas: **Usuarios · Parámetros · Catálogo · Stats**.
 | Zonas y equipos | Zonas con su potencia total, equipos con interruptor y creación de zonas y equipos (potencia con − / +, «en jornada» o «continuo»). |
 | Bitácora | Aprobaciones, horarios e intentos de ingreso fuera de horario. |
 | Importar catálogo | Elegir el Excel → vista previa → «Confirmar e importar». |
-| Estadísticas | La misma pantalla del gerente. |
+| Inventario y estadísticas | Las mismas pantallas del gerente. |
+
+## Velocidad
+
+- Al abrir la app se entra de inmediato con la sesión guardada; el servidor la confirma en segundo
+  plano. Salir es inmediato: el aviso de cierre de jornada sale en segundo plano.
+- La app «despierta» al servidor (Vercel apaga las funciones sin uso) mientras se escribe la clave.
+- Al entrar se precargan las demás pestañas del rol, y cada una guarda sus datos 2 minutos. Al
+  cambiar de sesión se descartan, para que nadie vea datos de otra persona.
+- La versión de depuración (`flutter run`) es mucho más lenta que la final; para medir la velocidad
+  real usa `flutter run --release`.
+
+## Compartir la app (Android)
+
+```
+flutter build apk --release
+```
+
+El APK queda en `build/app/outputs/flutter-apk/app-release.apk`. Súbelo a **GitHub → Releases**
+(o a Drive) y comparte el enlace; en el celular hay que permitir «instalar apps de fuentes
+desconocidas». Antes de cada entrega sube `version` en `pubspec.yaml` para que se instale encima.
+
+La versión final se firma con la clave de depuración de este computador: las actualizaciones deben
+compilarse en el mismo PC, o el celular pedirá desinstalar la anterior. Para publicar en Play Store
+hace falta una clave propia (ver «Signing the app» en la documentación de Flutter).
 
 ## Notas
 

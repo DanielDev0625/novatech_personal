@@ -4,12 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/cliente_api.dart';
 import '../../core/api/modelos.dart';
+import '../../core/cache.dart';
 import '../../core/sesion/sesion.dart';
 import '../../core/ubicacion.dart';
 import 'modelos_transportista.dart';
 
-List<Map<String, dynamic>> _lista(dynamic datos) =>
-    [for (final item in (datos as List)) Map<String, dynamic>.from(item as Map)];
+List<Map<String, dynamic>> _lista(dynamic datos) => [
+  for (final item in (datos as List)) Map<String, dynamic>.from(item as Map),
+];
 
 Map<String, dynamic> _objeto(dynamic datos) => Map<String, dynamic>.from(datos as Map);
 
@@ -22,16 +24,11 @@ class ApiTransportista {
 
   /// Paquetes listos en la zona de envíos, esperando transportista.
   Future<List<PedidoResumen>> enZonaEnvios() async =>
-      _lista(await _api.get('/pedidos', parametros: {'estado': 'en_zona_envios'}))
-          .map(PedidoResumen.fromJson)
-          .toList();
+      _lista(await _api.get('/pedidos', parametros: {'estado': 'en_zona_envios'})).map(PedidoResumen.fromJson).toList();
 
   /// Traspaso de custodia: el operario entrega el paquete y se escanea su QR.
   Future<void> recibirPaquete(int pedidoId, String codigo, Punto? posicion) async {
-    await _api.post('/pedidos/$pedidoId/recibir-transportista', datos: {
-      'codigo': codigo,
-      ...?posicion?.toJson(),
-    });
+    await _api.post('/pedidos/$pedidoId/recibir-transportista', datos: {'codigo': codigo, ...?posicion?.toJson()});
   }
 
   Future<Ruta> ruta() async => Ruta.fromJson(_objeto(await _api.get('/logistica/ruta')));
@@ -54,15 +51,22 @@ class ApiTransportista {
       ResumenLiquidacion.fromJson(_objeto(await _api.get('/liquidaciones/mias')));
 }
 
-final apiTransportistaProvider =
-    Provider<ApiTransportista>((ref) => ApiTransportista(ref.watch(clienteApiProvider)));
+final apiTransportistaProvider = Provider<ApiTransportista>((ref) => ApiTransportista(ref.watch(clienteApiProvider)));
 
-final zonaEnviosProvider = FutureProvider.autoDispose((ref) => ref.watch(apiTransportistaProvider).enZonaEnvios());
+final zonaEnviosProvider = FutureProvider.autoDispose((ref) {
+  cacheDeSesion(ref);
+  return ref.watch(apiTransportistaProvider).enZonaEnvios();
+});
 
-final rutaProvider = FutureProvider.autoDispose((ref) => ref.watch(apiTransportistaProvider).ruta());
+final rutaProvider = FutureProvider.autoDispose((ref) {
+  cacheDeSesion(ref);
+  return ref.watch(apiTransportistaProvider).ruta();
+});
 
-final liquidacionProvider =
-    FutureProvider.autoDispose((ref) => ref.watch(apiTransportistaProvider).liquidacion());
+final liquidacionProvider = FutureProvider.autoDispose((ref) {
+  cacheDeSesion(ref);
+  return ref.watch(apiTransportistaProvider).liquidacion();
+});
 
 void recargarTransportista(WidgetRef ref) {
   ref.invalidate(zonaEnviosProvider);

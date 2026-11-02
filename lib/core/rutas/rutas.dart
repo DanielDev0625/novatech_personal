@@ -2,25 +2,32 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/admin/api_admin.dart';
 import '../../features/admin/pantalla_bitacora.dart';
 import '../../features/admin/pantalla_catalogo.dart';
 import '../../features/admin/pantalla_parametros.dart';
 import '../../features/admin/pantalla_usuarios.dart';
 import '../../features/admin/pantalla_zonas.dart';
+import '../../features/gerencia/api_gerencia.dart';
+import '../../features/gerencia/modelos_gerencia.dart';
 import '../../features/gerencia/pantalla_aprobaciones.dart';
 import '../../features/gerencia/pantalla_energia.dart';
 import '../../features/gerencia/pantalla_estadisticas.dart';
+import '../../features/gerencia/pantalla_inventario.dart';
 import '../../features/gerencia/pantalla_panel.dart';
 import '../../features/gerencia/pantalla_programar_horas.dart';
+import '../../features/operario/api_operario.dart';
 import '../../features/operario/pantalla_alistar.dart';
 import '../../features/operario/pantalla_jornada.dart';
 import '../../features/operario/pantalla_recepcion.dart';
 import '../../features/operario/pantalla_recibir.dart';
 import '../../features/operario/pantalla_tareas.dart';
+import '../../features/transportista/api_transportista.dart';
 import '../../features/transportista/pantalla_entregar.dart';
 import '../../features/transportista/pantalla_entregas.dart';
 import '../../features/transportista/pantalla_liquidacion.dart';
 import '../../features/transportista/pantalla_ruta.dart';
+import '../cache.dart';
 import '../sesion/pantalla_login.dart';
 import '../sesion/sesion.dart';
 import '../widgets/pantalla_cargando.dart';
@@ -48,9 +55,9 @@ String? redireccionPorRol(EstadoSesion sesion, String ruta) {
 }
 
 /// Pestañas de un rol: cada una con su propia pila de navegación.
-StatefulShellRoute _pestanas(List<Pestana> pestanas, List<GoRoute> rutas) {
+StatefulShellRoute _pestanas(List<Pestana> pestanas, List<GoRoute> rutas, {void Function(WidgetRef)? precargar}) {
   return StatefulShellRoute.indexedStack(
-    builder: (context, estado, shell) => ShellRol(shell: shell, pestanas: pestanas),
+    builder: (context, estado, shell) => ShellRol(shell: shell, pestanas: pestanas, precargar: precargar),
     branches: [for (final ruta in rutas) StatefulShellBranch(routes: [ruta])],
   );
 }
@@ -83,6 +90,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           _ruta('/operario/recepcion', const PantallaRecepcion()),
           _ruta('/operario/jornada', const PantallaJornada()),
         ],
+        precargar: (ref) {
+          precargar(ref, comprasPorRecibirProvider.future);
+          precargar(ref, jornadaHoyProvider.future);
+          precargar(ref, horasExtraProvider.future);
+        },
       ),
       GoRoute(path: '/operario/alistar/:id', builder: (c, e) => PantallaAlistar(pedidoId: _id(e))),
       GoRoute(path: '/operario/recibir/:id', builder: (c, e) => PantallaRecibir(compraId: _id(e))),
@@ -99,6 +111,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           _ruta('/transportista/ruta', const PantallaRuta()),
           _ruta('/transportista/liquidacion', const PantallaLiquidacion()),
         ],
+        precargar: (ref) => precargar(ref, liquidacionProvider.future),
       ),
       GoRoute(path: '/transportista/entregar/:id', builder: (c, e) => PantallaEntregar(pedidoId: _id(e))),
 
@@ -107,15 +120,23 @@ final routerProvider = Provider<GoRouter>((ref) {
         const [
           Pestana(Icons.dashboard_outlined, Icons.dashboard, 'Panel'),
           Pestana(Icons.fact_check_outlined, Icons.fact_check, 'Aprobar'),
+          Pestana(Icons.inventory_2_outlined, Icons.inventory_2, 'Inventario'),
           Pestana(Icons.bar_chart_outlined, Icons.bar_chart, 'Stats'),
           Pestana(Icons.bolt_outlined, Icons.bolt, 'Energía'),
         ],
         [
           _ruta('/gerencia/panel', const PantallaPanel()),
           _ruta('/gerencia/aprobar', const PantallaAprobaciones()),
+          _ruta('/gerencia/inventario', const PantallaInventario()),
           _ruta('/gerencia/estadisticas', const PantallaEstadisticas()),
           _ruta('/gerencia/energia', const PantallaEnergia()),
         ],
+        precargar: (ref) {
+          precargar(ref, inventarioProvider.future);
+          precargar(ref, estadisticasProvider(Periodo.semana).future);
+          precargar(ref, consumoProvider.future);
+          precargar(ref, alertasEnergiaProvider.future);
+        },
       ),
       _ruta('/gerencia/horas-extra', const PantallaProgramarHoras()),
 
@@ -124,15 +145,22 @@ final routerProvider = Provider<GoRouter>((ref) {
         const [
           Pestana(Icons.group_outlined, Icons.group, 'Usuarios'),
           Pestana(Icons.tune_outlined, Icons.tune, 'Parámetros'),
+          Pestana(Icons.inventory_2_outlined, Icons.inventory_2, 'Inventario'),
           Pestana(Icons.upload_file_outlined, Icons.upload_file, 'Catálogo'),
           Pestana(Icons.bar_chart_outlined, Icons.bar_chart, 'Stats'),
         ],
         [
           _ruta('/admin/usuarios', const PantallaUsuarios()),
           _ruta('/admin/parametros', const PantallaParametros()),
+          _ruta('/admin/inventario', const PantallaInventario()),
           _ruta('/admin/catalogo', const PantallaCatalogo()),
           _ruta('/admin/estadisticas', const PantallaEstadisticas()),
         ],
+        precargar: (ref) {
+          precargar(ref, configuracionProvider.future);
+          precargar(ref, inventarioProvider.future);
+          precargar(ref, estadisticasProvider(Periodo.semana).future);
+        },
       ),
       _ruta('/admin/zonas', const PantallaZonas()),
       _ruta('/admin/bitacora', const PantallaBitacora()),

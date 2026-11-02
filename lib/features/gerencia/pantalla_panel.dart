@@ -59,7 +59,7 @@ class PantallaPanel extends ConsumerWidget {
                     etiqueta: 'Stock bajo',
                     valor: '${p.productosStockBajo}',
                     color: ColoresNovaTech.naranja,
-                    onTap: () => context.go('/gerencia/estadisticas'),
+                    onTap: () => context.go('/gerencia/inventario'),
                   ),
                   Indicador(
                     etiqueta: 'Por aprobar',

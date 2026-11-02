@@ -306,14 +306,33 @@ class Pestana {
 }
 
 /// Navegación inferior del rol: cada pestaña conserva su pantalla al cambiar.
-class ShellRol extends StatelessWidget {
-  const ShellRol({super.key, required this.shell, required this.pestanas});
+class ShellRol extends ConsumerStatefulWidget {
+  const ShellRol({super.key, required this.shell, required this.pestanas, this.precargar});
 
   final StatefulNavigationShell shell;
   final List<Pestana> pestanas;
 
+  /// Pide en segundo plano los datos de las otras pestañas, para que abran al instante.
+  final void Function(WidgetRef ref)? precargar;
+
+  @override
+  ConsumerState<ShellRol> createState() => _ShellRolState();
+}
+
+class _ShellRolState extends ConsumerState<ShellRol> {
+  @override
+  void initState() {
+    super.initState();
+    // Después del primer cuadro, para no retrasar la pantalla que se está abriendo.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.precargar?.call(ref);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final shell = widget.shell;
+    final pestanas = widget.pestanas;
     return Scaffold(
       body: shell,
       bottomNavigationBar: DecoratedBox(

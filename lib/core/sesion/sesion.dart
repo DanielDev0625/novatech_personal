@@ -53,6 +53,8 @@ class SesionNotifier extends Notifier<EstadoSesion> {
   EstadoSesion build() {
     _api.alNoAutorizado = _sesionVencida;
     ref.onDispose(() => _cierreAutomatico?.cancel());
+    // Mientras la persona escribe su clave, el servidor ya se va despertando.
+    unawaited(_api.despertar());
     Future.microtask(restaurar);
     return const EstadoSesion(restaurando: true);
   }
@@ -67,39 +69,65 @@ class SesionNotifier extends Notifier<EstadoSesion> {
     });
   }
 
-  /// Al abrir la app: si quedó una sesión vigente, entra directo.
-  Future<void> restaurar() async {
-    final huellaActiva = await _almacen.huellaActiva();
-    final huellaDisponible = await _biometria.disponible();
+  /// Las escrituras en el almacén seguro van en orden, para que borrar la sesión
+  /// anterior nunca pise la que se acaba de guardar.
+  Future<void> _cola = Future.value();
 
-    final guardada = await _almacen.leerSesion();
+  Future<void> _enCola(Future<void> Function() operacion) =>
+      _cola = _cola.then((_) => operacion()).then((_) {}, onError: (_) {});
+
+  /// Al abrir la app: si quedó una sesión vigente, entra de inmediato con ella y
+  /// el servidor la confirma en segundo plano (sin hacer esperar a la persona).
+  Future<void> restaurar() async {
+    final (huellaActiva, huellaDisponible, guardada) =
+        await (_almacen.huellaActiva(), _biometria.disponible(), _almacen.leerSesion()).wait;
+
     if (guardada != null) {
-      final (token, _) = guardada;
+      final (token, usuario) = guardada;
       final expira = expiracionDelToken(token);
-      if (expira != null && expira.isAfter(DateTime.now())) {
+      if (expira != null && expira.isAfter(DateTime.now()) && usuario.rol.esPersonal) {
         _api.token = token;
-        try {
-          // El servidor confirma que la sesión sigue vigente y trae el rol actual.
-          final actual = await _api.perfil();
-          if (actual.rol.esPersonal) {
-            state = EstadoSesion(
-              usuario: actual,
-              token: token,
-              expira: expira,
-              huellaActiva: huellaActiva,
-              huellaDisponible: huellaDisponible,
-            );
-            if (actual.rol.tieneJornada) _programarCierre(expira);
-            return;
-          }
-        } catch (_) {
-          // Sesión cerrada, vencida o sin red: se pide iniciar sesión de nuevo.
-        }
-        _api.token = null;
+        state = EstadoSesion(
+          usuario: usuario,
+          token: token,
+          expira: expira,
+          huellaActiva: huellaActiva,
+          huellaDisponible: huellaDisponible,
+        );
+        if (usuario.rol.tieneJornada) _programarCierre(expira);
+        unawaited(_confirmarSesion(token));
+        return;
       }
-      await _almacen.borrarSesion();
+      await _enCola(_almacen.borrarSesion);
     }
     state = EstadoSesion(huellaActiva: huellaActiva, huellaDisponible: huellaDisponible);
+  }
+
+  /// Pide el perfil para confirmar que la sesión sigue vigente y traer el rol actual.
+  /// Si el servidor responde 401, el cliente HTTP cierra la sesión solo; si no hay red,
+  /// se sigue con la sesión guardada.
+  Future<void> _confirmarSesion(String token) async {
+    try {
+      final actual = await _api.perfil();
+      if (state.token != token) return; // Se salió o entró otra persona mientras tanto.
+      if (!actual.rol.esPersonal) {
+        await _limpiar();
+        return;
+      }
+      final anterior = state.usuario;
+      if (anterior == null || anterior.rol != actual.rol || anterior.nombre != actual.nombre) {
+        state = EstadoSesion(
+          usuario: actual,
+          token: token,
+          expira: state.expira,
+          huellaActiva: state.huellaActiva,
+          huellaDisponible: state.huellaDisponible,
+        );
+        unawaited(_enCola(() => _almacen.guardarSesion(token, actual)));
+      }
+    } catch (_) {
+      // Sin red por ahora: la sesión guardada sigue sirviendo.
+    }
   }
 
   /// Inicia sesión con usuario y contraseña. Lanza [ErrorApi] con el mensaje del
@@ -170,12 +198,13 @@ class SesionNotifier extends Notifier<EstadoSesion> {
     );
   }
 
-  /// Botón «salir»: cierra la jornada en el servidor y borra la sesión del celular.
+  /// Botón «salir»: la sesión se cierra de inmediato en el celular y el aviso al
+  /// servidor (que cierra la jornada de hoy) sale en segundo plano con su propio token.
   Future<void> cerrarSesion() async {
-    try {
-      if (_api.token != null) await _api.salir();
-    } catch (_) {
+    final token = _api.token;
+    if (token != null) {
       // Aunque falle el aviso al servidor, la sesión local se cierra igual.
+      unawaited(_api.salir(token).then((_) {}, onError: (_) {}));
     }
     await _limpiar();
   }
@@ -187,8 +216,8 @@ class SesionNotifier extends Notifier<EstadoSesion> {
 
   Future<void> _entrar(String token, Usuario persona, bool huella) async {
     _api.token = token;
-    await _almacen.guardarSesion(token, persona);
     final expira = expiracionDelToken(token);
+    // Primero se entra; guardar en el almacén seguro sigue en segundo plano.
     state = EstadoSesion(
       usuario: persona,
       token: token,
@@ -197,18 +226,20 @@ class SesionNotifier extends Notifier<EstadoSesion> {
       huellaDisponible: state.huellaDisponible,
     );
     if (persona.rol.tieneJornada) _programarCierre(expira);
+    await _enCola(() => _almacen.guardarSesion(token, persona));
   }
 
   Future<void> _limpiar({String? aviso}) async {
     _cierreAutomatico?.cancel();
     _cierreAutomatico = null;
     _api.token = null;
-    await _almacen.borrarSesion();
+    // Primero se sale (la huella no cambia al cerrar sesión); borrar sigue en segundo plano.
     state = EstadoSesion(
-      huellaActiva: await _almacen.huellaActiva(),
+      huellaActiva: state.huellaActiva,
       huellaDisponible: state.huellaDisponible,
       aviso: aviso,
     );
+    await _enCola(_almacen.borrarSesion);
   }
 }
 

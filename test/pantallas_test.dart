@@ -20,6 +20,7 @@ import 'package:novatech_personal/features/gerencia/modelos_gerencia.dart';
 import 'package:novatech_personal/features/gerencia/pantalla_aprobaciones.dart';
 import 'package:novatech_personal/features/gerencia/pantalla_energia.dart';
 import 'package:novatech_personal/features/gerencia/pantalla_estadisticas.dart';
+import 'package:novatech_personal/features/gerencia/pantalla_inventario.dart';
 import 'package:novatech_personal/features/gerencia/pantalla_panel.dart';
 import 'package:novatech_personal/features/gerencia/pantalla_programar_horas.dart';
 import 'package:novatech_personal/features/operario/api_operario.dart';
@@ -464,5 +465,54 @@ void main() {
     await _mostrar(tester, const PantallaCatalogo(), [_sesion(Rol.administrador)]);
     expect(find.text('Excel'), findsOneWidget);
     expect(find.text('Factura PDF'), findsOneWidget);
+  }, variant: _letra);
+
+  testWidgets('Gerente · Inventario', (tester) async {
+    Map<String, dynamic> producto(int id, String nombre, int stock, {bool bajo = false}) => {
+      'id': id,
+      'sku': 'SKU-$id',
+      'nombre': nombre,
+      'marca': 'AMD',
+      'categoria': 'Procesadores',
+      'costo': 700000,
+      'precio': 899000,
+      'stock': stock,
+      'stock_minimo': 5,
+      'stock_bajo': bajo,
+      'activo': true,
+    };
+    await _mostrar(tester, const PantallaInventario(), [
+      _sesion(Rol.gerente),
+      inventarioProvider.overrideWith(
+        (ref) async => [
+          ProductoInventario.fromJson(producto(1, 'Ryzen 5 7600', 12)),
+          ProductoInventario.fromJson(producto(2, 'Ryzen 7 7700', 2, bajo: true)),
+        ],
+      ),
+      lotesProvider.overrideWith(
+        (ref, id) async => [
+          Lote.fromJson({
+            'codigo': 'LOT-0007',
+            'cantidad_inicial': 20,
+            'cantidad_restante': 12,
+            'costo_unitario': 700000,
+            'proveedor': 'Mayorista Andino',
+            'fecha_recepcion': '2026-10-20T09:00:00',
+            'estado': 'almacenado',
+          }),
+        ],
+      ),
+    ]);
+    expect(find.text('Valor en bodega'), findsOneWidget);
+    expect(find.text('2 productos'), findsOneWidget);
+
+    await tester.tap(find.text('Stock bajo · 1'));
+    await tester.pumpAndSettle();
+    expect(find.text('1 producto'), findsOneWidget);
+
+    await tester.tap(find.text('Ryzen 7 7700'));
+    await tester.pumpAndSettle();
+    expect(find.text('LOT-0007'), findsOneWidget);
+    expect(find.text('Almacenado'), findsOneWidget);
   }, variant: _letra);
 }

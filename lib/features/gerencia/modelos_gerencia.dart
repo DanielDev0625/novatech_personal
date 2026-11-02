@@ -323,3 +323,126 @@ DateTime lunesDe(DateTime dia) {
   final d = soloFecha(dia);
   return d.subtract(Duration(days: d.weekday - 1));
 }
+
+// ---- Inventario ----
+
+/// Un producto del inventario con su stock, costo y precio.
+class ProductoInventario {
+  const ProductoInventario({
+    required this.id,
+    required this.sku,
+    required this.nombre,
+    required this.marca,
+    required this.categoria,
+    required this.costo,
+    required this.precio,
+    required this.stock,
+    required this.stockMinimo,
+    required this.stockBajo,
+    required this.activo,
+  });
+
+  final int id;
+  final String sku;
+  final String nombre;
+  final String? marca;
+  final String categoria;
+  final double costo;
+  final double precio;
+  final int stock;
+  final int stockMinimo;
+  final bool stockBajo;
+  final bool activo;
+
+  bool get agotado => stock <= 0;
+
+  /// Lo que vale lo que hay en bodega, a precio de costo.
+  double get valor => costo * stock;
+
+  /// Margen sobre el costo (0,18 = 18 %); null si no hay costo.
+  double? get margen => costo > 0 ? (precio - costo) / costo : null;
+
+  factory ProductoInventario.fromJson(Map<String, dynamic> json) => ProductoInventario(
+    id: json['id'] as int,
+    sku: json['sku'] as String? ?? '',
+    nombre: json['nombre'] as String? ?? '',
+    marca: json['marca'] as String?,
+    categoria: json['categoria'] as String? ?? '',
+    costo: _num(json['costo']),
+    precio: _num(json['precio']),
+    stock: json['stock'] as int? ?? 0,
+    stockMinimo: json['stock_minimo'] as int? ?? 0,
+    stockBajo: json['stock_bajo'] as bool? ?? false,
+    activo: json['activo'] as bool? ?? true,
+  );
+}
+
+/// Un lote de un producto (lo que llegó en una recepción).
+class Lote {
+  const Lote({
+    required this.codigo,
+    required this.cantidadInicial,
+    required this.cantidadRestante,
+    required this.costoUnitario,
+    required this.proveedor,
+    required this.fechaRecepcion,
+    required this.estado,
+  });
+
+  final String codigo;
+  final int cantidadInicial;
+  final int cantidadRestante;
+  final double costoUnitario;
+  final String? proveedor;
+  final DateTime? fechaRecepcion;
+
+  /// «recibido», «almacenado» o «agotado».
+  final String estado;
+
+  factory Lote.fromJson(Map<String, dynamic> json) => Lote(
+    codigo: json['codigo'] as String? ?? '',
+    cantidadInicial: json['cantidad_inicial'] as int? ?? 0,
+    cantidadRestante: json['cantidad_restante'] as int? ?? 0,
+    costoUnitario: _num(json['costo_unitario']),
+    proveedor: json['proveedor'] as String?,
+    fechaRecepcion: leerFecha(json['fecha_recepcion']),
+    estado: json['estado'] as String? ?? '',
+  );
+}
+
+/// Filtros del inventario.
+enum FiltroInventario { todos, stockBajo, agotados }
+
+/// Orden del inventario.
+enum OrdenInventario {
+  nombre('Nombre'),
+  menorStock('Menor stock'),
+  mayorValor('Mayor valor');
+
+  const OrdenInventario(this.etiqueta);
+  final String etiqueta;
+}
+
+/// Aplica filtro, categoría y orden a la lista de productos.
+List<ProductoInventario> filtrarInventario(
+  List<ProductoInventario> productos, {
+  FiltroInventario filtro = FiltroInventario.todos,
+  String? categoria,
+  OrdenInventario orden = OrdenInventario.nombre,
+}) {
+  final lista = productos.where((p) {
+    if (categoria != null && p.categoria != categoria) return false;
+    return switch (filtro) {
+      FiltroInventario.todos => true,
+      FiltroInventario.stockBajo => p.stockBajo && !p.agotado,
+      FiltroInventario.agotados => p.agotado,
+    };
+  }).toList();
+  int porNombre(ProductoInventario a, ProductoInventario b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase());
+  lista.sort(switch (orden) {
+    OrdenInventario.nombre => porNombre,
+    OrdenInventario.menorStock => (a, b) => a.stock != b.stock ? a.stock.compareTo(b.stock) : porNombre(a, b),
+    OrdenInventario.mayorValor => (a, b) => a.valor != b.valor ? b.valor.compareTo(a.valor) : porNombre(a, b),
+  });
+  return lista;
+}
