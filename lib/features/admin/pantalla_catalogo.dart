@@ -7,6 +7,7 @@ import '../../core/tema/tema.dart';
 import '../../core/widgets/componentes.dart';
 import '../../core/widgets/scaffold_rol.dart';
 import '../../core/widgets/vista_async.dart';
+import '../gerencia/api_gerencia.dart';
 import 'api_admin.dart';
 
 /// «Importar catálogo»: se sube el Excel, se revisa la vista previa y se confirma.
@@ -21,10 +22,7 @@ class PantallaCatalogo extends ConsumerStatefulWidget {
 const _tiposExcel = XTypeGroup(
   label: 'Excel',
   extensions: ['xlsx', 'xls'],
-  mimeTypes: [
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'application/vnd.ms-excel',
-  ],
+  mimeTypes: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'],
   uniformTypeIdentifiers: ['org.openxmlformats.spreadsheetml.sheet', 'com.microsoft.excel.xls'],
 );
 
@@ -59,7 +57,11 @@ class _PantallaCatalogoState extends ConsumerState<PantallaCatalogo> {
           .importarCatalogo(archivo.bytes, archivo.name, confirmar: confirmar);
       if (!mounted) return;
       setState(() => confirmar ? _resultado = respuesta : _vistaPrevia = respuesta);
-      if (confirmar) mostrarMensaje(context, 'Catálogo importado.');
+      if (confirmar) {
+        // Los productos y lotes nuevos deben verse ya en Inventario y Estadísticas.
+        recargarInventario(ref);
+        mostrarMensaje(context, 'Catálogo importado.');
+      }
     } catch (e) {
       if (mounted) mostrarMensaje(context, errorDesde(e).mensaje, error: true);
     } finally {
@@ -124,7 +126,10 @@ class _PantallaCatalogoState extends ConsumerState<PantallaCatalogo> {
             texto: 'Elige el Excel del catálogo. Primero verás una vista previa; nada se guarda hasta que confirmes.',
           ),
         if (_cargando && _vistaPrevia == null)
-          const Padding(padding: EdgeInsets.all(32), child: Center(child: CircularProgressIndicator())),
+          const Padding(
+            padding: EdgeInsets.all(32),
+            child: Center(child: CircularProgressIndicator()),
+          ),
         if (_resultado != null) ...[
           TituloSeccion('Resultado · ${_archivo!.name}'),
           _Respuesta(datos: _resultado),
@@ -195,6 +200,14 @@ class _Respuesta extends StatelessWidget {
     return texto.isEmpty ? texto : '${texto[0].toUpperCase()}${texto.substring(1)}';
   }
 
+  /// «true» → «Sí», para que no se vean valores técnicos.
+  static String _valor(Object? valor) => switch (valor) {
+    true => 'Sí',
+    false => 'No',
+    null => '—',
+    _ => '$valor',
+  };
+
   static String _textoFila(Object? fila) {
     if (fila is Map) {
       final nombre = fila['nombre'] ?? fila['producto'] ?? fila['sku'];
@@ -211,7 +224,9 @@ class _Respuesta extends StatelessWidget {
   Widget build(BuildContext context) {
     final mapa = datos;
     if (mapa is! Map) {
-      return Card(child: Padding(padding: const EdgeInsets.all(14), child: Text('$mapa')));
+      return Card(
+        child: Padding(padding: const EdgeInsets.all(14), child: Text('$mapa')),
+      );
     }
     final resumen = mapa.entries.where((e) => e.value is! List && e.value is! Map).toList();
     final listas = mapa.entries.where((e) => e.value is List).toList();
@@ -231,7 +246,7 @@ class _Respuesta extends StatelessWidget {
                       child: Row(
                         children: [
                           Expanded(child: Text(_etiqueta('${e.key}'))),
-                          Text('${e.value}', style: const TextStyle(fontWeight: FontWeight.w700)),
+                          Text(_valor(e.value), style: const TextStyle(fontWeight: FontWeight.w700)),
                         ],
                       ),
                     ),
@@ -260,10 +275,7 @@ class _Respuesta extends StatelessWidget {
               child: Padding(padding: const EdgeInsets.all(12), child: Text(_textoFila(fila))),
             ),
           if ((e.value as List).length > 50)
-            Text(
-              'y ${(e.value as List).length - 50} más…',
-              style: const TextStyle(color: ColoresNovaTech.textoSuave),
-            ),
+            Text('y ${(e.value as List).length - 50} más…', style: const TextStyle(color: ColoresNovaTech.textoSuave)),
         ],
       ],
     );

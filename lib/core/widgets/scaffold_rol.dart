@@ -322,13 +322,17 @@ class Pestana {
 
 /// Navegación inferior del rol: cada pestaña conserva su pantalla al cambiar.
 class ShellRol extends ConsumerStatefulWidget {
-  const ShellRol({super.key, required this.shell, required this.pestanas, this.precargar});
+  const ShellRol({super.key, required this.shell, required this.pestanas, this.precargar, this.alCambiarPestana});
 
   final StatefulNavigationShell shell;
   final List<Pestana> pestanas;
 
   /// Pide en segundo plano los datos de las otras pestañas, para que abran al instante.
   final void Function(WidgetRef ref)? precargar;
+
+  /// Se llama al pasar a otra pestaña, para traer datos frescos en segundo plano
+  /// (mientras llegan se siguen viendo los anteriores).
+  final void Function(WidgetRef ref)? alCambiarPestana;
 
   @override
   ConsumerState<ShellRol> createState() => _ShellRolState();
@@ -349,7 +353,10 @@ class _ShellRolState extends ConsumerState<ShellRol> {
     final shell = widget.shell;
     final pestanas = widget.pestanas;
     // Tocar la pestaña activa vuelve a su pantalla inicial.
-    void ir(int i) => shell.goBranch(i, initialLocation: i == shell.currentIndex);
+    void ir(int i) {
+      if (i != shell.currentIndex) widget.alCambiarPestana?.call(ref);
+      shell.goBranch(i, initialLocation: i == shell.currentIndex);
+    }
 
     // Escritorio (web en computador): menú lateral azul marino, unido al encabezado.
     if (esEscritorio(context)) {

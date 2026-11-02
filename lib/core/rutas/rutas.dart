@@ -55,10 +55,18 @@ String? redireccionPorRol(EstadoSesion sesion, String ruta) {
 }
 
 /// Pestañas de un rol: cada una con su propia pila de navegación.
-StatefulShellRoute _pestanas(List<Pestana> pestanas, List<GoRoute> rutas, {void Function(WidgetRef)? precargar}) {
+StatefulShellRoute _pestanas(
+  List<Pestana> pestanas,
+  List<GoRoute> rutas, {
+  void Function(WidgetRef)? precargar,
+  void Function(WidgetRef)? alCambiarPestana,
+}) {
   return StatefulShellRoute.indexedStack(
-    builder: (context, estado, shell) => ShellRol(shell: shell, pestanas: pestanas, precargar: precargar),
-    branches: [for (final ruta in rutas) StatefulShellBranch(routes: [ruta])],
+    builder: (context, estado, shell) =>
+        ShellRol(shell: shell, pestanas: pestanas, precargar: precargar, alCambiarPestana: alCambiarPestana),
+    branches: [
+      for (final ruta in rutas) StatefulShellBranch(routes: [ruta]),
+    ],
   );
 }
 
@@ -95,9 +103,16 @@ final routerProvider = Provider<GoRouter>((ref) {
           precargar(ref, jornadaHoyProvider.future);
           precargar(ref, horasExtraProvider.future);
         },
+        alCambiarPestana: recargarOperario,
       ),
-      GoRoute(path: '/operario/alistar/:id', builder: (c, e) => PantallaAlistar(pedidoId: _id(e))),
-      GoRoute(path: '/operario/recibir/:id', builder: (c, e) => PantallaRecibir(compraId: _id(e))),
+      GoRoute(
+        path: '/operario/alistar/:id',
+        builder: (c, e) => PantallaAlistar(pedidoId: _id(e)),
+      ),
+      GoRoute(
+        path: '/operario/recibir/:id',
+        builder: (c, e) => PantallaRecibir(compraId: _id(e)),
+      ),
 
       // ---- Transportista ----
       _pestanas(
@@ -112,8 +127,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           _ruta('/transportista/liquidacion', const PantallaLiquidacion()),
         ],
         precargar: (ref) => precargar(ref, liquidacionProvider.future),
+        alCambiarPestana: recargarTransportista,
       ),
-      GoRoute(path: '/transportista/entregar/:id', builder: (c, e) => PantallaEntregar(pedidoId: _id(e))),
+      GoRoute(
+        path: '/transportista/entregar/:id',
+        builder: (c, e) => PantallaEntregar(pedidoId: _id(e)),
+      ),
 
       // ---- Gerencia ----
       _pestanas(
@@ -136,6 +155,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           precargar(ref, estadisticasProvider(Periodo.semana).future);
           precargar(ref, consumoProvider.future);
           precargar(ref, alertasEnergiaProvider.future);
+        },
+        alCambiarPestana: (ref) {
+          recargarGerencia(ref);
+          ref.invalidate(consumoProvider);
+          ref.invalidate(alertasEnergiaProvider);
         },
       ),
       _ruta('/gerencia/horas-extra', const PantallaProgramarHoras()),
@@ -160,6 +184,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           precargar(ref, configuracionProvider.future);
           precargar(ref, inventarioProvider.future);
           precargar(ref, estadisticasProvider(Periodo.semana).future);
+        },
+        // Parámetros no se recarga solo, para no borrar cambios sin guardar.
+        alCambiarPestana: (ref) {
+          ref.invalidate(usuariosProvider);
+          recargarInventario(ref);
         },
       ),
       _ruta('/admin/zonas', const PantallaZonas()),

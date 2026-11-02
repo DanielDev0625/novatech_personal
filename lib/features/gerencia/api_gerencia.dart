@@ -185,4 +185,13 @@ void recargarGerencia(WidgetRef ref) {
   ref.invalidate(comprasAtrasadasProvider);
   ref.invalidate(horasExtraSolicitadasProvider);
   ref.invalidate(transportistasProvider);
+  // Aceptar una recepción con diferencias crea un lote: el stock cambia.
+  recargarInventario(ref);
+}
+
+/// Recarga lo que depende del stock (después de importar el catálogo, recibir mercancía...).
+void recargarInventario(WidgetRef ref) {
+  ref.invalidate(inventarioProvider);
+  ref.invalidate(lotesProvider);
+  ref.invalidate(estadisticasProvider);
 }
