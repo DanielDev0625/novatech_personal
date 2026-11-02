@@ -4,6 +4,8 @@
 <dict>
 	<key>NSCameraUsageDescription</key>
 	<string>La cámara se usa para leer el código de cada producto al alistar pedidos.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Tu ubicación se usa durante las entregas para calcular la ruta y que el cliente vea por dónde va su pedido.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

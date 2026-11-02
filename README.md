@@ -8,7 +8,7 @@ iniciar sesión y la app abre la parte que corresponde.
 |---|---|---|
 | P1 | ✅ | Base, tema, login con huella y navegación por rol. |
 | P2 | ✅ | Todo lo que hace el **operario**. |
-| P3 | Pendiente | Transportista. |
+| P3 | ✅ | Todo lo que hace el **transportista**. |
 | P4 | Pendiente | Gerencia y administración. |
 
 ## Correr la app
@@ -50,6 +50,31 @@ flutter run --dart-define=API_URL=http://10.0.2.2:8000
 - Rutas: `/operario/tareas`, `/operario/alistar/:id`, `/operario/recepcion`,
   `/operario/recibir/:id`, `/operario/jornada`.
 - Permiso de cámara declarado en `AndroidManifest.xml` e `Info.plist` (paquete `mobile_scanner`).
+- Sin cambios en el backend.
+
+## P3 · Transportista
+
+| Pantalla | Qué hace |
+|---|---|
+| Inicio del transportista | Accesos con conteos (paquetes listos, paradas) y lo pendiente por pagar. Mismo aviso de fin de jornada y cierre automático que el operario. Mientras hay entregas en ruta, comparte la ubicación cada 30 s (con la app abierta) para el seguimiento del cliente. |
+| Recibir paquetes | Lista de pedidos en la zona de envíos. «Escanear paquete» lee el QR del paquete y lo pasa a tu ruta (traspaso de custodia). |
+| Mi ruta | Mapa (OpenStreetMap) con las paradas numeradas en el orden más eficiente, distancia y hora aproximada de llegada. «Iniciar ruta» pone en ruta todos los paquetes recibidos. En cada parada: «Cómo llegar» (abre Google Maps) y «Entregar», que escanea el QR que muestra el cliente. |
+| Mi liquidación | Totales pendiente, pagado y total, y el detalle de cada entrega con tarifa y comisión. |
+
+### Probar con datos
+
+- **Paquete para recibir:** alista un pedido como operario hasta «Listo para envío» y genera un QR
+  cuyo texto sea el **código del pedido** (por ejemplo `PED-0007`).
+- **Entrega:** el QR de entrega es el que la app del cliente muestra (`qr_entrega` del pedido); para
+  probar, genera un QR con ese texto.
+- El celular pedirá permiso de ubicación al recibir un paquete o iniciar la ruta. Si se niega, todo
+  funciona igual y la ruta se calcula desde la bodega.
+
+### Notas
+
+- Rutas: `/transportista/recibir`, `/transportista/ruta`, `/transportista/liquidacion`.
+- Paquetes nuevos: `flutter_map` + `latlong2` (mapa), `geolocator` (GPS) y `url_launcher`
+  («Cómo llegar»). Permisos de ubicación en `AndroidManifest.xml` e `Info.plist`.
 - Sin cambios en el backend.
 
 ## Estructura

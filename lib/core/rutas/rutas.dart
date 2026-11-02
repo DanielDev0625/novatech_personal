@@ -10,6 +10,9 @@ import '../../features/operario/pantalla_operario.dart';
 import '../../features/operario/pantalla_recepcion.dart';
 import '../../features/operario/pantalla_recibir.dart';
 import '../../features/operario/pantalla_tareas.dart';
+import '../../features/transportista/pantalla_liquidacion.dart';
+import '../../features/transportista/pantalla_recibir_paquetes.dart';
+import '../../features/transportista/pantalla_ruta.dart';
 import '../../features/transportista/pantalla_transportista.dart';
 import '../sesion/pantalla_login.dart';
 import '../sesion/sesion.dart';
@@ -65,7 +68,15 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: 'jornada', builder: (c, e) => const PantallaJornada()),
         ],
       ),
-      GoRoute(path: '/transportista', builder: (c, e) => const PantallaTransportista()),
+      GoRoute(
+        path: '/transportista',
+        builder: (c, e) => const PantallaTransportista(),
+        routes: [
+          GoRoute(path: 'recibir', builder: (c, e) => const PantallaRecibirPaquetes()),
+          GoRoute(path: 'ruta', builder: (c, e) => const PantallaRuta()),
+          GoRoute(path: 'liquidacion', builder: (c, e) => const PantallaLiquidacion()),
+        ],
+      ),
       GoRoute(path: '/gerencia', builder: (c, e) => const PantallaGerencia()),
       GoRoute(path: '/admin', builder: (c, e) => const PantallaAdmin()),
     ],
