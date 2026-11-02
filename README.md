@@ -109,6 +109,8 @@ Pestañas: **Usuarios · Parámetros · Inventario · Catálogo · Stats**.
 
 ## Versión web
 
+Publicada en **https://novatech-personal.vercel.app**
+
 La misma app corre en el navegador. En pantallas anchas (computador) cambia a diseño de escritorio:
 menú lateral azul marino con el logo, contenido centrado, indicadores de a cuatro, ruta con el mapa
 grande al lado de las paradas y login con el panel de la marca. En el celular se ve igual que la app.
@@ -134,8 +136,9 @@ flutter build web --release
 vercel deploy build/web --prod
 ```
 
-La primera vez pide iniciar sesión y el nombre del proyecto; luego da la dirección pública
-(por ejemplo `https://novatech-personal.vercel.app`).
+La primera vez pide iniciar sesión y crear el proyecto: no conectar el repositorio de Git (Vercel no
+tiene Flutter para compilar), dejar `./` como carpeta y no cambiar la configuración. Para actualizar
+la página basta con volver a compilar y desplegar.
 
 ## Compartir la app (Android)
 
