@@ -64,11 +64,12 @@ class _PantallaInventarioState extends ConsumerState<PantallaInventario> {
               children: [
                 RejillaIndicadores(
                   indicadores: [
-                    Indicador(etiqueta: 'Productos', valor: '${activos.length}', detalle: categorias.length == 1 ? '1 categoría' : '${categorias.length} categorías'),
                     Indicador(
-                      etiqueta: 'Unidades',
-                      valor: entero(activos.fold<double>(0, (s, p) => s + p.stock)),
+                      etiqueta: 'Productos',
+                      valor: '${activos.length}',
+                      detalle: categorias.length == 1 ? '1 categoría' : '${categorias.length} categorías',
                     ),
+                    Indicador(etiqueta: 'Unidades', valor: entero(activos.fold<double>(0, (s, p) => s + p.stock))),
                     Indicador(
                       etiqueta: 'Valor en bodega',
                       valor: pesosCorto(activos.fold<double>(0, (s, p) => s + p.valor)),
@@ -78,7 +79,11 @@ class _PantallaInventarioState extends ConsumerState<PantallaInventario> {
                       etiqueta: 'Stock bajo',
                       valor: '$bajos',
                       color: ColoresNovaTech.naranja,
-                      detalle: agotados > 0 ? '$agotados agotados' : null,
+                      detalle: agotados == 0
+                          ? null
+                          : agotados == 1
+                          ? '1 agotado'
+                          : '$agotados agotados',
                       onTap: () => setState(() => _filtro = FiltroInventario.stockBajo),
                     ),
                   ],
@@ -227,7 +232,10 @@ class _TarjetaProducto extends StatelessWidget {
                       '${p.stock}',
                       style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: _colorStock(p)),
                     ),
-                    Text('mín ${p.stockMinimo}', style: const TextStyle(color: ColoresNovaTech.textoSuave, fontSize: 12)),
+                    Text(
+                      'mín ${p.stockMinimo}',
+                      style: const TextStyle(color: ColoresNovaTech.textoSuave, fontSize: 12),
+                    ),
                     const SizedBox(height: 4),
                     Text(pesos(p.precio), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                   ],
@@ -304,10 +312,7 @@ class _DetalleProducto extends ConsumerWidget {
           ),
           if (p.stockMinimo > 0) ...[
             const SizedBox(height: 14),
-            BarraAvance(
-              valor: p.stock / (p.stockMinimo * 2),
-              color: _colorStock(p),
-            ),
+            BarraAvance(valor: p.stock / (p.stockMinimo * 2), color: _colorStock(p)),
             const SizedBox(height: 4),
             Text(
               p.agotado

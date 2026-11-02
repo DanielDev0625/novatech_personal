@@ -1,12 +1,13 @@
 {
-    "name": "novatech_personal",
-    "short_name": "novatech_personal",
+    "name": "NovaTech Personal",
+    "short_name": "NovaTech",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#0B1F3A",
+    "theme_color": "#0B1F3A",
+    "description": "App del personal de NovaTech: pedidos, alistamiento, rutas, aprobaciones, inventario y energía.",
+    "lang": "es",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {

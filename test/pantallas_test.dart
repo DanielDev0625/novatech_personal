@@ -8,6 +8,7 @@ import 'package:novatech_personal/core/api/modelos.dart';
 import 'package:novatech_personal/core/sesion/pantalla_login.dart';
 import 'package:novatech_personal/core/sesion/sesion.dart';
 import 'package:novatech_personal/core/tema/tema.dart';
+import 'package:novatech_personal/main.dart';
 import 'package:novatech_personal/features/admin/api_admin.dart';
 import 'package:novatech_personal/features/admin/modelos_admin.dart';
 import 'package:novatech_personal/features/admin/pantalla_bitacora.dart';
@@ -515,4 +516,57 @@ void main() {
     expect(find.text('LOT-0007'), findsOneWidget);
     expect(find.text('Almacenado'), findsOneWidget);
   }, variant: _letra);
+
+  group('Escritorio (web en computador)', () {
+    Future<void> escritorio(WidgetTester tester, Widget app, List<Override> overrides) async {
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(ProviderScope(overrides: overrides, child: app));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('Login con el panel de la marca', (tester) async {
+      await escritorio(
+        tester,
+        MaterialApp(theme: TemaNovaTech.claro(), home: const PantallaLogin()),
+        [_sesion(null)],
+      );
+      expect(find.textContaining('Trazabilidad, logística'), findsOneWidget);
+      expect(find.text('Iniciar sesión'), findsOneWidget);
+    });
+
+    testWidgets('Gerente con menú lateral, panel e inventario', (tester) async {
+      await escritorio(tester, const NovaTechPersonal(), [
+        _sesion(Rol.gerente),
+        panelProvider.overrideWith(
+          (ref) async => Panel.fromJson({'pedidos': 18, 'porcentaje_a_tiempo': 94, 'productos_stock_bajo': 5}),
+        ),
+        comprasSugeridasProvider.overrideWith((ref) async => [_compra]),
+        comprasConDiferenciasProvider.overrideWith((ref) async => <Compra>[]),
+        horasExtraSolicitadasProvider.overrideWith((ref) async => <HoraExtra>[]),
+        comprasAtrasadasProvider.overrideWith((ref) async => <Compra>[]),
+        transportistasProvider.overrideWith((ref) async => <TransportistaEstado>[]),
+        inventarioProvider.overrideWith((ref) async => <ProductoInventario>[]),
+        estadisticasProvider.overrideWith(
+          (ref, periodo) async => Estadisticas.desde(
+            productos: {},
+            categorias: {},
+            entregas: {'entregadas': 0, 'a_tiempo': 0, 'tardias': 0},
+            stockBajo: [],
+          ),
+        ),
+        consumoProvider.overrideWith((ref) async => Consumo.fromJson({'total_kwh': 0, 'zonas': []})),
+        alertasEnergiaProvider.overrideWith((ref) async => <AlertaEnergia>[]),
+      ]);
+      expect(find.byType(NavigationRail), findsOneWidget);
+      expect(find.byType(NavigationBar), findsNothing);
+      expect(find.text('Panel del día'), findsOneWidget);
+      expect(find.text('94%'), findsOneWidget);
+
+      await tester.tap(find.text('Inventario'));
+      await tester.pumpAndSettle();
+      expect(find.text('Valor en bodega'), findsOneWidget);
+    });
+  });
 }

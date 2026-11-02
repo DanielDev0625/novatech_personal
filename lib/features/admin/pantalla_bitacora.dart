@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/formato.dart';
 import '../../core/tema/tema.dart';
+import '../../core/widgets/adaptable.dart';
 import '../../core/widgets/scaffold_rol.dart';
 import '../../core/widgets/vista_async.dart';
 import 'api_admin.dart';
@@ -36,20 +37,22 @@ class PantallaBitacora extends ConsumerWidget {
     final bitacora = ref.watch(bitacoraProvider);
     return Scaffold(
       appBar: barraNovaTech(titulo: 'Bitácora'),
-      body: RefreshIndicator(
-        onRefresh: () => _recargar(ref),
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
-          children: [
-            VistaAsync(
-              valor: bitacora,
-              alReintentar: () => _recargar(ref),
-              datos: (lista) => lista.isEmpty
-                  ? const ListaVacia(icono: Icons.history, texto: 'La bitácora está vacía.')
-                  : Column(children: [for (final e in lista) _Entrada(entrada: e)]),
-            ),
-          ],
+      body: ContenidoCentrado(
+        child: RefreshIndicator(
+          onRefresh: () => _recargar(ref),
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
+            children: [
+              VistaAsync(
+                valor: bitacora,
+                alReintentar: () => _recargar(ref),
+                datos: (lista) => lista.isEmpty
+                    ? const ListaVacia(icono: Icons.history, texto: 'La bitácora está vacía.')
+                    : Column(children: [for (final e in lista) _Entrada(entrada: e)]),
+              ),
+            ],
+          ),
         ),
       ),
     );

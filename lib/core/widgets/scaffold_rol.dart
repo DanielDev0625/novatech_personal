@@ -1,3 +1,6 @@
+import 'dart:math' as math;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,18 +9,14 @@ import '../api/modelos.dart';
 import '../formato.dart';
 import '../sesion/sesion.dart';
 import '../tema/tema.dart';
+import 'adaptable.dart';
 import 'componentes.dart';
 import 'marca.dart';
 import 'vista_async.dart';
 
 /// Barra superior de NovaTech: azul marino con las franjas de la marca debajo.
 /// Con [etiqueta] muestra dos líneas (p. ej. «Operario» / «Mis tareas»), como en el diseño.
-PreferredSizeWidget barraNovaTech({
-  required String titulo,
-  String? etiqueta,
-  Widget? chip,
-  List<Widget>? acciones,
-}) {
+PreferredSizeWidget barraNovaTech({required String titulo, String? etiqueta, Widget? chip, List<Widget>? acciones}) {
   final alto = (etiqueta != null ? 64.0 : kToolbarHeight) + (chip != null ? 36 : 0);
   return AppBar(
     toolbarHeight: alto,
@@ -27,7 +26,10 @@ PreferredSizeWidget barraNovaTech({
       mainAxisSize: MainAxisSize.min,
       children: [
         if (etiqueta != null)
-          Text(etiqueta, style: const TextStyle(fontSize: 13, color: Colors.white70, fontWeight: FontWeight.w400)),
+          Text(
+            etiqueta,
+            style: const TextStyle(fontSize: 13, color: Colors.white70, fontWeight: FontWeight.w400),
+          ),
         Text(
           titulo,
           style: TextStyle(fontSize: etiqueta != null ? 22 : 18, fontWeight: FontWeight.w600, color: Colors.white),
@@ -54,10 +56,7 @@ class ChipEncabezado extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(20),
-      ),
+      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -102,10 +101,16 @@ class EsqueletoRol extends ConsumerWidget {
     final usuario = ref.watch(sesionProvider).usuario;
     if (usuario == null) return const SizedBox.shrink();
 
-    final lista = ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-      physics: const AlwaysScrollableScrollPhysics(),
-      children: hijos,
+    // En pantallas anchas el contenido se centra (la barra de desplazamiento queda al borde).
+    final lista = LayoutBuilder(
+      builder: (context, limites) {
+        final margen = math.max(16.0, (limites.maxWidth - anchoContenido) / 2);
+        return ListView(
+          padding: EdgeInsets.fromLTRB(margen, 12, margen, 24),
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: hijos,
+        );
+      },
     );
     final recargar = alRecargar;
 
@@ -114,15 +119,28 @@ class EsqueletoRol extends ConsumerWidget {
         etiqueta: usuario.rol.etiqueta,
         titulo: titulo,
         chip: chip,
-        acciones: const [BotonCuenta()],
+        acciones: [
+          // Con mouse no se puede «jalar para recargar»: en la web hay botón.
+          if (kIsWeb && recargar != null)
+            IconButton(
+              tooltip: 'Actualizar',
+              onPressed: recargar,
+              icon: const Icon(Icons.refresh, color: Colors.white),
+            ),
+          const BotonCuenta(),
+        ],
       ),
       body: Column(
         children: [
-          Expanded(child: recargar == null ? lista : RefreshIndicator(onRefresh: recargar, child: lista)),
+          Expanded(
+            child: recargar == null ? lista : RefreshIndicator(onRefresh: recargar, child: lista),
+          ),
           if (accionInferior != null)
             SafeArea(
               top: false,
-              child: Padding(padding: const EdgeInsets.fromLTRB(16, 4, 16, 12), child: accionInferior),
+              child: ContenidoCentrado(
+                child: Padding(padding: const EdgeInsets.fromLTRB(16, 4, 16, 12), child: accionInferior),
+              ),
             ),
         ],
       ),
@@ -142,11 +160,8 @@ class BotonCuenta extends ConsumerWidget {
       padding: const EdgeInsets.only(right: 12),
       child: IconButton(
         tooltip: 'Tu cuenta',
-        onPressed: () => showModalBottomSheet<void>(
-          context: context,
-          showDragHandle: true,
-          builder: (_) => const _MenuCuenta(),
-        ),
+        onPressed: () =>
+            showModalBottomSheet<void>(context: context, showDragHandle: true, builder: (_) => const _MenuCuenta()),
         icon: CircleAvatar(
           radius: 18,
           backgroundColor: Colors.white.withValues(alpha: 0.15),
@@ -259,12 +274,12 @@ String iniciales(String nombre) {
 
 /// Color que identifica a cada rol (los acentos de la marca).
 Color colorRol(Rol rol) => switch (rol) {
-      Rol.operario => ColoresNovaTech.verde,
-      Rol.transportista => ColoresNovaTech.naranja,
-      Rol.gerente => ColoresNovaTech.azul,
-      Rol.administrador => ColoresNovaTech.rojo,
-      Rol.usuario => ColoresNovaTech.textoSuave,
-    };
+  Rol.operario => ColoresNovaTech.verde,
+  Rol.transportista => ColoresNovaTech.naranja,
+  Rol.gerente => ColoresNovaTech.azul,
+  Rol.administrador => ColoresNovaTech.rojo,
+  Rol.usuario => ColoresNovaTech.textoSuave,
+};
 
 class AvatarPersona extends StatelessWidget {
   const AvatarPersona({super.key, required this.nombre, required this.rol, this.radio = 20});
@@ -333,14 +348,53 @@ class _ShellRolState extends ConsumerState<ShellRol> {
   Widget build(BuildContext context) {
     final shell = widget.shell;
     final pestanas = widget.pestanas;
+    // Tocar la pestaña activa vuelve a su pantalla inicial.
+    void ir(int i) => shell.goBranch(i, initialLocation: i == shell.currentIndex);
+
+    // Escritorio (web en computador): menú lateral azul marino, unido al encabezado.
+    if (esEscritorio(context)) {
+      return Scaffold(
+        body: Row(
+          children: [
+            NavigationRail(
+              selectedIndex: shell.currentIndex,
+              onDestinationSelected: ir,
+              labelType: NavigationRailLabelType.all,
+              backgroundColor: ColoresNovaTech.marino,
+              indicatorColor: Colors.white.withValues(alpha: 0.14),
+              selectedIconTheme: const IconThemeData(color: Colors.white),
+              unselectedIconTheme: IconThemeData(color: Colors.white.withValues(alpha: 0.65)),
+              selectedLabelTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12),
+              unselectedLabelTextStyle: TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 12),
+              leading: const Padding(
+                padding: EdgeInsets.only(top: 14, bottom: 18),
+                child: Tooltip(message: 'NovaTech', child: SimboloNovaTech(tamano: 38)),
+              ),
+              destinations: [
+                for (final p in pestanas)
+                  NavigationRailDestination(
+                    icon: Icon(p.icono),
+                    selectedIcon: Icon(p.iconoActivo),
+                    label: Text(p.etiqueta),
+                  ),
+              ],
+            ),
+            const VerticalDivider(width: 1, color: ColoresNovaTech.borde),
+            Expanded(child: shell),
+          ],
+        ),
+      );
+    }
+
     return Scaffold(
       body: shell,
       bottomNavigationBar: DecoratedBox(
-        decoration: const BoxDecoration(border: Border(top: BorderSide(color: ColoresNovaTech.borde))),
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: ColoresNovaTech.borde)),
+        ),
         child: NavigationBar(
           selectedIndex: shell.currentIndex,
-          // Tocar la pestaña activa vuelve a su pantalla inicial.
-          onDestinationSelected: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
+          onDestinationSelected: ir,
           destinations: [
             for (final p in pestanas)
               NavigationDestination(icon: Icon(p.icono), selectedIcon: Icon(p.iconoActivo), label: p.etiqueta),

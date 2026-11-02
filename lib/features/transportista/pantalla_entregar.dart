@@ -7,6 +7,7 @@ import '../../core/api/cliente_api.dart';
 import '../../core/formato.dart';
 import '../../core/tema/tema.dart';
 import '../../core/ubicacion.dart';
+import '../../core/widgets/adaptable.dart';
 import '../../core/widgets/escaner.dart';
 import '../../core/widgets/scaffold_rol.dart';
 import '../../core/widgets/vista_async.dart';
@@ -28,19 +29,21 @@ class PantallaEntregar extends ConsumerWidget {
     final ruta = ref.watch(rutaProvider);
     return Scaffold(
       appBar: barraNovaTech(titulo: 'Confirmar entrega'),
-      body: VistaAsync(
-        valor: ruta,
-        alReintentar: () => ref.invalidate(rutaProvider),
-        datos: (datos) {
-          final parada = datos.paradas.where((p) => p.pedidoId == pedidoId).firstOrNull;
-          if (parada == null || !parada.enRuta) {
-            return const ListaVacia(
-              icono: Icons.info_outline,
-              texto: 'Este pedido ya no está en ruta. Vuelve a tus entregas.',
-            );
-          }
-          return _Entrega(parada: parada);
-        },
+      body: ContenidoCentrado(
+        child: VistaAsync(
+          valor: ruta,
+          alReintentar: () => ref.invalidate(rutaProvider),
+          datos: (datos) {
+            final parada = datos.paradas.where((p) => p.pedidoId == pedidoId).firstOrNull;
+            if (parada == null || !parada.enRuta) {
+              return const ListaVacia(
+                icono: Icons.info_outline,
+                texto: 'Este pedido ya no está en ruta. Vuelve a tus entregas.',
+              );
+            }
+            return _Entrega(parada: parada);
+          },
+        ),
       ),
     );
   }
@@ -95,7 +98,9 @@ class _EntregaState extends ConsumerState<_Entrega> {
         builder: (contexto) => AlertDialog(
           icon: const Icon(Icons.check_circle, color: ColoresNovaTech.verde, size: 56),
           title: const Text('Pedido entregado'),
-          content: Text('${parada.codigo} quedó entregado a ${parada.cliente.isEmpty ? 'el cliente' : parada.cliente}.'),
+          content: Text(
+            '${parada.codigo} quedó entregado a ${parada.cliente.isEmpty ? 'el cliente' : parada.cliente}.',
+          ),
           actions: [
             FilledButton(
               style: FilledButton.styleFrom(minimumSize: const Size(110, 44)),
@@ -158,16 +163,17 @@ class _EntregaState extends ConsumerState<_Entrega> {
           ),
         ),
         const SizedBox(height: 10),
-        const Text(
-          'Escanea el QR que muestra el cliente',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 15),
-        ),
+        const Text('Escanea el QR que muestra el cliente', textAlign: TextAlign.center, style: TextStyle(fontSize: 15)),
         const SizedBox(height: 12),
-        _EstadoGps(buscando: _buscandoGps, posicion: _posicion, parada: parada, onReintentar: () {
-          setState(() => _buscandoGps = true);
-          _ubicar();
-        }),
+        _EstadoGps(
+          buscando: _buscandoGps,
+          posicion: _posicion,
+          parada: parada,
+          onReintentar: () {
+            setState(() => _buscandoGps = true);
+            _ubicar();
+          },
+        ),
         const SizedBox(height: 12),
         OutlinedButton.icon(
           onPressed: () => navegarA(context, parada),
@@ -180,12 +186,7 @@ class _EntregaState extends ConsumerState<_Entrega> {
 }
 
 class _EstadoGps extends StatelessWidget {
-  const _EstadoGps({
-    required this.buscando,
-    required this.posicion,
-    required this.parada,
-    required this.onReintentar,
-  });
+  const _EstadoGps({required this.buscando, required this.posicion, required this.parada, required this.onReintentar});
 
   final bool buscando;
   final Punto? posicion;
@@ -198,15 +199,15 @@ class _EstadoGps extends StatelessWidget {
       _ when buscando => (Icons.gps_not_fixed, ColoresNovaTech.textoSuave, 'Buscando tu ubicación…'),
       null => (Icons.location_disabled, ColoresNovaTech.naranja, 'Sin GPS: la entrega se registra sin ubicación.'),
       final p => () {
-          final metros = p.metrosHasta(parada.direccion.latitud, parada.direccion.longitud);
-          return metros <= metrosCercaDeLaDireccion
-              ? (Icons.where_to_vote_outlined, ColoresNovaTech.verde, 'GPS coincide con la dirección guardada')
-              : (
-                  Icons.wrong_location_outlined,
-                  ColoresNovaTech.naranja,
-                  'Estás a ${distancia(metros / 1000)} de la dirección guardada',
-                );
-        }(),
+        final metros = p.metrosHasta(parada.direccion.latitud, parada.direccion.longitud);
+        return metros <= metrosCercaDeLaDireccion
+            ? (Icons.where_to_vote_outlined, ColoresNovaTech.verde, 'GPS coincide con la dirección guardada')
+            : (
+                Icons.wrong_location_outlined,
+                ColoresNovaTech.naranja,
+                'Estás a ${distancia(metros / 1000)} de la dirección guardada',
+              );
+      }(),
     };
     return Card(
       child: ListTile(

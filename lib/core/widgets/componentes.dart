@@ -82,7 +82,7 @@ class Indicador extends StatelessWidget {
   }
 }
 
-/// Dos indicadores por fila.
+/// Indicadores en rejilla: dos por fila en el celular, cuatro cuando hay espacio.
 class RejillaIndicadores extends StatelessWidget {
   const RejillaIndicadores({super.key, required this.indicadores});
 
@@ -90,23 +90,29 @@ class RejillaIndicadores extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        for (var i = 0; i < indicadores.length; i += 2)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(child: indicadores[i]),
-                  const SizedBox(width: 10),
-                  Expanded(child: i + 1 < indicadores.length ? indicadores[i + 1] : const SizedBox()),
-                ],
+    return LayoutBuilder(
+      builder: (context, limites) {
+        final porFila = limites.maxWidth >= 640 ? 4 : 2;
+        return Column(
+          children: [
+            for (var i = 0; i < indicadores.length; i += porFila)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (var j = i; j < i + porFila; j++) ...[
+                        if (j > i) const SizedBox(width: 10),
+                        Expanded(child: j < indicadores.length ? indicadores[j] : const SizedBox()),
+                      ],
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ),
-      ],
+          ],
+        );
+      },
     );
   }
 }

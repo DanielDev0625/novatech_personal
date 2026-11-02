@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/api/modelos.dart';
 import '../../core/api/cliente_api.dart';
 import '../../core/tema/tema.dart';
+import '../../core/widgets/adaptable.dart';
 import '../../core/widgets/scaffold_rol.dart';
 import '../../core/widgets/vista_async.dart';
 import 'api_operario.dart';
@@ -23,15 +24,14 @@ class PantallaRecibir extends ConsumerWidget {
       appBar: barraNovaTech(
         titulo: compra.valueOrNull == null ? 'Recepción' : 'Recepción ${compra.valueOrNull!.codigo}',
       ),
-      body: VistaAsync(
-        valor: compra,
-        alReintentar: () => ref.invalidate(compraProvider(compraId)),
-        datos: (datos) => datos.estado == 'aprobada'
-            ? _Conteo(compra: datos)
-            : const ListaVacia(
-                icono: Icons.info_outline,
-                texto: 'Esta compra ya no está pendiente de recibir.',
-              ),
+      body: ContenidoCentrado(
+        child: VistaAsync(
+          valor: compra,
+          alReintentar: () => ref.invalidate(compraProvider(compraId)),
+          datos: (datos) => datos.estado == 'aprobada'
+              ? _Conteo(compra: datos)
+              : const ListaVacia(icono: Icons.info_outline, texto: 'Esta compra ya no está pendiente de recibir.'),
+        ),
       ),
     );
   }
@@ -56,7 +56,8 @@ class _ConteoState extends ConsumerState<_Conteo> {
     final ok = await confirmar(
       context,
       titulo: 'Registrar recepción',
-      texto: 'En buen estado: $_buenas\nDañadas: $_danadas\n\n'
+      texto:
+          'En buen estado: $_buenas\nDañadas: $_danadas\n\n'
           '${resumenRecepcion(aprobada: compra.cantidad, buenas: _buenas, danadas: _danadas)}',
       aceptar: 'Registrar',
     );
@@ -91,7 +92,7 @@ class _ConteoState extends ConsumerState<_Conteo> {
           bien
               ? 'Se creó el lote ${resultado.lote ?? ''} y el stock ya está disponible.'
               : 'La compra quedó «con diferencias». El stock queda retenido hasta que gerencia decida.'
-                  '${resultado.nota != null ? '\n\n${resultado.nota}' : ''}',
+                    '${resultado.nota != null ? '\n\n${resultado.nota}' : ''}',
         ),
         actions: [
           FilledButton(
@@ -139,9 +140,9 @@ class _ConteoState extends ConsumerState<_Conteo> {
                 onPressed: _enviando
                     ? null
                     : () => setState(() {
-                          _buenas = compra.cantidad;
-                          _danadas = 0;
-                        }),
+                        _buenas = compra.cantidad;
+                        _danadas = 0;
+                      }),
                 icon: const Icon(Icons.done_all),
                 label: Text('Llegaron las ${compra.cantidad} en buen estado'),
               ),
@@ -174,9 +175,7 @@ class _ConteoState extends ConsumerState<_Conteo> {
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Text(
-                          resumenRecepcion(aprobada: compra.cantidad, buenas: _buenas, danadas: _danadas),
-                        ),
+                        child: Text(resumenRecepcion(aprobada: compra.cantidad, buenas: _buenas, danadas: _danadas)),
                       ),
                     ],
                   ),
@@ -250,19 +249,17 @@ class _Contador extends StatelessWidget {
               children: [
                 Icon(icono, color: color),
                 const SizedBox(width: 8),
-                Expanded(child: Text(titulo, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600))),
-                Text('$valor', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: color)),
+                Expanded(
+                  child: Text(titulo, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                ),
+                Text(
+                  '$valor',
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: color),
+                ),
               ],
             ),
             const SizedBox(height: 8),
-            Row(
-              children: [
-                _boton('−10', -10),
-                _boton('−1', -1),
-                _boton('+1', 1),
-                _boton('+10', 10),
-              ],
-            ),
+            Row(children: [_boton('−10', -10), _boton('−1', -1), _boton('+1', 1), _boton('+10', 10)]),
           ],
         ),
       ),

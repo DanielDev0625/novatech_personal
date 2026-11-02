@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/cliente_api.dart';
 import '../tema/tema.dart';
+import '../widgets/adaptable.dart';
 import '../widgets/marca.dart';
 import 'sesion.dart';
 
@@ -39,10 +40,7 @@ class _PantallaLoginState extends ConsumerState<PantallaLogin> {
           'Tu acceso se guarda de forma segura en este celular.',
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(contexto, false),
-            child: const Text('Ahora no'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(contexto, false), child: const Text('Ahora no')),
           FilledButton(
             style: FilledButton.styleFrom(minimumSize: const Size(96, 44)),
             onPressed: () => Navigator.pop(contexto, true),
@@ -80,14 +78,11 @@ class _PantallaLoginState extends ConsumerState<PantallaLogin> {
       return;
     }
     await _ejecutar(
-      () => ref
-          .read(sesionProvider.notifier)
-          .iniciarSesion(usuario, password, ofrecerHuella: _preguntarHuella),
+      () => ref.read(sesionProvider.notifier).iniciarSesion(usuario, password, ofrecerHuella: _preguntarHuella),
     );
   }
 
-  Future<void> _entrarConHuella() =>
-      _ejecutar(() => ref.read(sesionProvider.notifier).entrarConHuella());
+  Future<void> _entrarConHuella() => _ejecutar(() => ref.read(sesionProvider.notifier).entrarConHuella());
 
   @override
   Widget build(BuildContext context) {
@@ -95,132 +90,178 @@ class _PantallaLoginState extends ConsumerState<PantallaLogin> {
     final puedeHuella = sesion.huellaActiva && sesion.huellaDisponible;
     final mensaje = _error ?? sesion.aviso;
 
-    return Scaffold(
-      body: Column(
-        children: [
-          SizedBox(height: MediaQuery.paddingOf(context).top),
-          const FranjaColores(ancho: double.infinity, alto: 5),
-          Expanded(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 400),
-                  child: AutofillGroup(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const Center(child: LogoNovaTech.vertical(alto: 130)),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'App del personal',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: ColoresNovaTech.textoSuave, fontSize: 15),
-                        ),
-                        const SizedBox(height: 36),
-                        TextField(
-                          controller: _usuario,
-                          enabled: !_cargando,
-                          autocorrect: false,
-                          enableSuggestions: false,
-                          textInputAction: TextInputAction.next,
-                          autofillHints: const [AutofillHints.username],
-                          decoration: const InputDecoration(
-                            hintText: 'Usuario',
-                            prefixIcon: Icon(Icons.person_outline),
+    final formulario = Column(
+      children: [
+        SizedBox(height: MediaQuery.paddingOf(context).top),
+        const FranjaColores(ancho: double.infinity, alto: 5),
+        Expanded(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400),
+                child: AutofillGroup(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Center(child: LogoNovaTech.vertical(alto: 130)),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'App del personal',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: ColoresNovaTech.textoSuave, fontSize: 15),
+                      ),
+                      const SizedBox(height: 36),
+                      TextField(
+                        controller: _usuario,
+                        enabled: !_cargando,
+                        autocorrect: false,
+                        enableSuggestions: false,
+                        textInputAction: TextInputAction.next,
+                        autofillHints: const [AutofillHints.username],
+                        decoration: const InputDecoration(hintText: 'Usuario', prefixIcon: Icon(Icons.person_outline)),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _password,
+                        enabled: !_cargando,
+                        obscureText: _ocultar,
+                        autocorrect: false,
+                        enableSuggestions: false,
+                        textInputAction: TextInputAction.done,
+                        autofillHints: const [AutofillHints.password],
+                        onSubmitted: (_) => _ingresar(),
+                        decoration: InputDecoration(
+                          hintText: 'Contraseña',
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            tooltip: _ocultar ? 'Mostrar contraseña' : 'Ocultar contraseña',
+                            icon: Icon(_ocultar ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                            onPressed: () => setState(() => _ocultar = !_ocultar),
                           ),
                         ),
+                      ),
+                      if (mensaje != null) ...[
                         const SizedBox(height: 12),
-                        TextField(
-                          controller: _password,
-                          enabled: !_cargando,
-                          obscureText: _ocultar,
-                          autocorrect: false,
-                          enableSuggestions: false,
-                          textInputAction: TextInputAction.done,
-                          autofillHints: const [AutofillHints.password],
-                          onSubmitted: (_) => _ingresar(),
-                          decoration: InputDecoration(
-                            hintText: 'Contraseña',
-                            prefixIcon: const Icon(Icons.lock_outline),
-                            suffixIcon: IconButton(
-                              tooltip: _ocultar ? 'Mostrar contraseña' : 'Ocultar contraseña',
-                              icon: Icon(_ocultar ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-                              onPressed: () => setState(() => _ocultar = !_ocultar),
-                            ),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: ColoresNovaTech.rojo.withValues(alpha: 0.07),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: ColoresNovaTech.rojo.withValues(alpha: 0.35)),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(Icons.error_outline, color: ColoresNovaTech.rojo, size: 20),
+                              const SizedBox(width: 8),
+                              Expanded(child: Text(mensaje)),
+                            ],
                           ),
                         ),
-                        if (mensaje != null) ...[
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: ColoresNovaTech.rojo.withValues(alpha: 0.07),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: ColoresNovaTech.rojo.withValues(alpha: 0.35)),
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Icon(Icons.error_outline, color: ColoresNovaTech.rojo, size: 20),
-                                const SizedBox(width: 8),
-                                Expanded(child: Text(mensaje)),
-                              ],
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 16),
-                        FilledButton(
-                          onPressed: _cargando ? null : _ingresar,
-                          child: _cargando
-                              ? const SizedBox(
-                                  height: 22,
-                                  width: 22,
-                                  child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
-                                )
-                              : const Text('Iniciar sesión'),
-                        ),
-                        if (puedeHuella) ...[
-                          const SizedBox(height: 24),
-                          Center(
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(16),
-                              onTap: _cargando ? null : _entrarConHuella,
-                              child: const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                                child: Column(
-                                  children: [
-                                    Icon(Icons.fingerprint, size: 52, color: ColoresNovaTech.azul),
-                                    SizedBox(height: 4),
-                                    Text('Entrar con huella', style: TextStyle(color: ColoresNovaTech.textoSuave)),
-                                  ],
-                                ),
+                      ],
+                      const SizedBox(height: 16),
+                      FilledButton(
+                        onPressed: _cargando ? null : _ingresar,
+                        child: _cargando
+                            ? const SizedBox(
+                                height: 22,
+                                width: 22,
+                                child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                              )
+                            : const Text('Iniciar sesión'),
+                      ),
+                      if (puedeHuella) ...[
+                        const SizedBox(height: 24),
+                        Center(
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: _cargando ? null : _entrarConHuella,
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                              child: Column(
+                                children: [
+                                  Icon(Icons.fingerprint, size: 52, color: ColoresNovaTech.azul),
+                                  SizedBox(height: 4),
+                                  Text('Entrar con huella', style: TextStyle(color: ColoresNovaTech.textoSuave)),
+                                ],
                               ),
                             ),
                           ),
-                          TextButton(
-                            onPressed: _cargando ? null : () => ref.read(sesionProvider.notifier).olvidarHuella(),
-                            child: const Text('Usar otra cuenta'),
-                          ),
-                        ],
+                        ),
+                        TextButton(
+                          onPressed: _cargando ? null : () => ref.read(sesionProvider.notifier).olvidarHuella(),
+                          child: const Text('Usar otra cuenta'),
+                        ),
                       ],
-                    ),
+                    ],
                   ),
                 ),
               ),
             ),
           ),
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: Text(
-                'El rol lo define tu cuenta',
-                style: TextStyle(color: ColoresNovaTech.textoSuave.withValues(alpha: 0.8), fontSize: 13),
-              ),
+        ),
+        SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Text(
+              'El rol lo define tu cuenta',
+              style: TextStyle(color: ColoresNovaTech.textoSuave.withValues(alpha: 0.8), fontSize: 13),
             ),
           ),
-        ],
+        ),
+      ],
+    );
+
+    // En el computador: panel de la marca a la izquierda y el formulario a la derecha.
+    if (esEscritorio(context)) {
+      return Scaffold(
+        body: Row(
+          children: [
+            const Expanded(child: _PanelMarca()),
+            Expanded(child: formulario),
+          ],
+        ),
+      );
+    }
+    return Scaffold(body: formulario);
+  }
+}
+
+class _PanelMarca extends StatelessWidget {
+  const _PanelMarca();
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: ColoresNovaTech.marino,
+      child: Padding(
+        padding: const EdgeInsets.all(48),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const LogoNovaTech.horizontalBlanco(alto: 64),
+            const Spacer(),
+            const Text(
+              'Trazabilidad, logística y\neficiencia energética',
+              style: TextStyle(color: Colors.white, fontSize: 34, fontWeight: FontWeight.w700, height: 1.2),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Pedidos, alistamiento, rutas, aprobaciones, inventario y energía en un solo lugar '
+              'para todo el personal de NovaTech.',
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 16, height: 1.4),
+            ),
+            const SizedBox(height: 32),
+            const FranjaColores(ancho: 220, alto: 5),
+            const Spacer(),
+            Text(
+              'Distribuidora de componentes de PC',
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 13),
+            ),
+          ],
+        ),
       ),
     );
   }

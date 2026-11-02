@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/cliente_api.dart';
 import '../../core/tema/tema.dart';
+import '../../core/widgets/adaptable.dart';
 import '../../core/widgets/componentes.dart';
 import '../../core/widgets/scaffold_rol.dart';
 import '../../core/widgets/vista_async.dart';
@@ -69,26 +70,28 @@ class _PantallaZonasState extends ConsumerState<PantallaZonas> {
     final zonas = ref.watch(zonasProvider);
     return Scaffold(
       appBar: barraNovaTech(titulo: 'Zonas y equipos'),
-      body: RefreshIndicator(
-        onRefresh: _recargar,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
-          children: [
-            VistaAsync(
-              valor: zonas,
-              alReintentar: _recargar,
-              datos: (lista) => lista.isEmpty
-                  ? const ListaVacia(icono: Icons.bolt_outlined, texto: 'Aún no hay zonas. Crea la primera.')
-                  : Column(children: [for (final zona in lista) _tarjetaZona(zona)]),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              onPressed: _nuevaZona,
-              icon: const Icon(Icons.add_location_alt_outlined),
-              label: const Text('Nueva zona'),
-            ),
-          ],
+      body: ContenidoCentrado(
+        child: RefreshIndicator(
+          onRefresh: _recargar,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
+            children: [
+              VistaAsync(
+                valor: zonas,
+                alReintentar: _recargar,
+                datos: (lista) => lista.isEmpty
+                    ? const ListaVacia(icono: Icons.bolt_outlined, texto: 'Aún no hay zonas. Crea la primera.')
+                    : Column(children: [for (final zona in lista) _tarjetaZona(zona)]),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _nuevaZona,
+                icon: const Icon(Icons.add_location_alt_outlined),
+                label: const Text('Nueva zona'),
+              ),
+            ],
+          ),
         ),
       ),
     );

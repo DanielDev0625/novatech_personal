@@ -1,6 +1,7 @@
 # NovaTech Personal
 
-App del personal de NovaTech (operario, transportista, gerente y administrador). Solo se escribe
+App del personal de NovaTech (operario, transportista, gerente y administrador), para **Android,
+iOS y web** desde el mismo código. Solo se escribe
 usuario y contraseña; todo lo demás se toca, se escanea o se elige. El servidor devuelve el rol al
 iniciar sesión y la app abre la parte que corresponde, con su propia navegación inferior.
 
@@ -106,6 +107,36 @@ Pestañas: **Usuarios · Parámetros · Inventario · Catálogo · Stats**.
 - La versión de depuración (`flutter run`) es mucho más lenta que la final; para medir la velocidad
   real usa `flutter run --release`.
 
+## Versión web
+
+La misma app corre en el navegador. En pantallas anchas (computador) cambia a diseño de escritorio:
+menú lateral azul marino con el logo, contenido centrado, indicadores de a cuatro, ruta con el mapa
+grande al lado de las paradas y login con el panel de la marca. En el celular se ve igual que la app.
+
+```
+flutter run -d chrome          # probar en el navegador
+flutter build web --release    # genera build/web para publicar
+```
+
+- El backend ya permite peticiones desde cualquier página (CORS), no hay que cambiarlo.
+- Direcciones limpias (`/gerencia/panel`): el servidor debe devolver `index.html` en cualquier ruta.
+  Para Vercel ya va `web/vercel.json`; en otro hosting configura esa misma redirección.
+- La huella no existe en el navegador; la cámara (escáner) y el GPS piden permiso al navegador y
+  solo funcionan con **https** (o en `localhost`).
+- En la web la sesión se guarda cifrada en el navegador. Hay un botón «Actualizar» en cada pantalla
+  porque con mouse no se puede jalar hacia abajo.
+
+**Publicar en Vercel** (gratis, la misma cuenta del backend):
+
+```
+npm i -g vercel
+flutter build web --release
+vercel deploy build/web --prod
+```
+
+La primera vez pide iniciar sesión y el nombre del proyecto; luego da la dirección pública
+(por ejemplo `https://novatech-personal.vercel.app`).
+
 ## Compartir la app (Android)
 
 ```
@@ -140,6 +171,7 @@ assets/img/    logos de NovaTech
 lib/
   core/        API, sesión, rutas, tema, formatos y widgets comunes
   features/    una carpeta por rol: operario, transportista, gerencia, admin
+web/           página de la versión web: carga con el logo, íconos, manifiesto y vercel.json
 test/          lógica (conteos, modelos, parámetros, redirección por rol) y cada pantalla
                dibujada en tamaño de celular, con letra normal y grande
 ```

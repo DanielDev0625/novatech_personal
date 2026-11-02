@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/api/cliente_api.dart';
 import '../../core/tema/tema.dart';
+import '../../core/widgets/adaptable.dart';
 import '../../core/widgets/componentes.dart';
 import '../../core/widgets/escaner.dart';
 import '../../core/widgets/scaffold_rol.dart';
@@ -24,15 +25,17 @@ class PantallaAlistar extends ConsumerWidget {
     final codigo = pedido.valueOrNull?.codigo;
     return Scaffold(
       appBar: barraNovaTech(titulo: codigo == null ? 'Alistamiento' : 'Alistando $codigo'),
-      body: VistaAsync(
-        valor: pedido,
-        alReintentar: () => ref.invalidate(pedidoProvider(pedidoId)),
-        datos: (datos) => datos.alistando
-            ? _Alistamiento(pedido: datos)
-            : const ListaVacia(
-                icono: Icons.info_outline,
-                texto: 'Este pedido ya no está en alistamiento. Vuelve a «Mis tareas».',
-              ),
+      body: ContenidoCentrado(
+        child: VistaAsync(
+          valor: pedido,
+          alReintentar: () => ref.invalidate(pedidoProvider(pedidoId)),
+          datos: (datos) => datos.alistando
+              ? _Alistamiento(pedido: datos)
+              : const ListaVacia(
+                  icono: Icons.info_outline,
+                  texto: 'Este pedido ya no está en alistamiento. Vuelve a «Mis tareas».',
+                ),
+        ),
       ),
     );
   }
@@ -114,7 +117,8 @@ class _AlistamientoState extends ConsumerState<_Alistamiento> {
     final ok = await confirmar(
       context,
       titulo: 'Listo para envío',
-      texto: 'Confirma que empacaste las ${_conteo.totalPedido} unidades del pedido '
+      texto:
+          'Confirma que empacaste las ${_conteo.totalPedido} unidades del pedido '
           '${widget.pedido.codigo} y lo dejas en la zona de envíos.',
       aceptar: 'Listo',
     );
@@ -218,12 +222,7 @@ class _AlistamientoState extends ConsumerState<_Alistamiento> {
 }
 
 class _LineaAlistamiento extends StatelessWidget {
-  const _LineaAlistamiento({
-    required this.linea,
-    required this.escaneados,
-    required this.onMenos,
-    required this.onMas,
-  });
+  const _LineaAlistamiento({required this.linea, required this.escaneados, required this.onMenos, required this.onMas});
 
   final LineaPedido linea;
   final int escaneados;

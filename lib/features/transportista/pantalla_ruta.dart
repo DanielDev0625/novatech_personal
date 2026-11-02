@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/formato.dart';
 import '../../core/tema/tema.dart';
+import '../../core/widgets/adaptable.dart';
 import '../../core/widgets/componentes.dart';
 import '../../core/widgets/scaffold_rol.dart';
 import '../../core/widgets/vista_async.dart';
@@ -67,48 +68,76 @@ class PantallaRuta extends ConsumerWidget {
                   ],
                 ),
               )
-            : Column(
-                children: [
-                  SizedBox(height: 260, child: _MapaRuta(ruta: datos)),
-                  Expanded(
-                    child: RefreshIndicator(
-                      onRefresh: () => _recargar(ref),
-                      child: ListView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.all(16),
-                        children: [
-                          _SiguienteParada(parada: siguiente!, ruta: datos),
-                          const TituloSeccion('Todas las paradas'),
-                          for (final parada in datos.paradas)
-                            Card(
-                              child: ListTile(
-                                leading: _NumeroParada(orden: parada.orden, enRuta: parada.enRuta),
-                                title: Text(parada.direccion.texto, maxLines: 1, overflow: TextOverflow.ellipsis),
-                                subtitle: Text('${parada.codigo} · ${duracion(parada.etaMinutos)}'),
-                                trailing: parada.enRuta ? const Icon(Icons.qr_code_scanner) : null,
-                                onTap: parada.enRuta
-                                    ? () => context.push('/transportista/entregar/${parada.pedidoId}')
-                                    : null,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
+            : _Disposicion(
+                mapa: _MapaRuta(ruta: datos),
+                lista: RefreshIndicator(
+                  onRefresh: () => _recargar(ref),
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      _SiguienteParada(parada: siguiente!, ruta: datos),
+                      const TituloSeccion('Todas las paradas'),
+                      for (final parada in datos.paradas)
+                        Card(
+                          child: ListTile(
+                            leading: _NumeroParada(orden: parada.orden, enRuta: parada.enRuta),
+                            title: Text(parada.direccion.texto, maxLines: 1, overflow: TextOverflow.ellipsis),
+                            subtitle: Text('${parada.codigo} · ${duracion(parada.etaMinutos)}'),
+                            trailing: parada.enRuta ? const Icon(Icons.qr_code_scanner) : null,
+                            onTap: parada.enRuta
+                                ? () => context.push('/transportista/entregar/${parada.pedidoId}')
+                                : null,
+                          ),
+                        ),
+                    ],
                   ),
-                  SafeArea(
-                    top: false,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-                      child: FilledButton.icon(
-                        onPressed: () => navegarA(context, siguiente),
-                        icon: const Icon(Icons.navigation_outlined),
-                        label: const Text('Navegar'),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
+                accion: FilledButton.icon(
+                  onPressed: () => navegarA(context, siguiente),
+                  icon: const Icon(Icons.navigation_outlined),
+                  label: const Text('Navegar'),
+                ),
               ),
       ),
+    );
+  }
+}
+
+/// Celular: mapa arriba y paradas abajo. Escritorio: mapa grande a la izquierda y
+/// paradas en una columna a la derecha.
+class _Disposicion extends StatelessWidget {
+  const _Disposicion({required this.mapa, required this.lista, required this.accion});
+
+  final Widget mapa;
+  final Widget lista;
+  final Widget accion;
+
+  @override
+  Widget build(BuildContext context) {
+    final panel = Column(
+      children: [
+        Expanded(child: lista),
+        SafeArea(
+          top: false,
+          child: Padding(padding: const EdgeInsets.fromLTRB(16, 4, 16, 12), child: accion),
+        ),
+      ],
+    );
+    if (esEscritorio(context)) {
+      return Row(
+        children: [
+          Expanded(child: mapa),
+          const VerticalDivider(width: 1, color: ColoresNovaTech.borde),
+          SizedBox(width: 420, child: panel),
+        ],
+      );
+    }
+    return Column(
+      children: [
+        SizedBox(height: 260, child: mapa),
+        Expanded(child: panel),
+      ],
     );
   }
 }
@@ -189,11 +218,7 @@ class _MapaRuta extends StatelessWidget {
 
     return FlutterMap(
       options: MapOptions(
-        initialCameraFit: CameraFit.coordinates(
-          coordinates: puntos,
-          padding: const EdgeInsets.all(40),
-          maxZoom: 16,
-        ),
+        initialCameraFit: CameraFit.coordinates(coordinates: puntos, padding: const EdgeInsets.all(40), maxZoom: 16),
         interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
       ),
       children: [
@@ -250,7 +275,10 @@ class _NumeroParada extends StatelessWidget {
         shape: BoxShape.circle,
         border: Border.all(color: Colors.white, width: 2),
       ),
-      child: Text('$orden', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+      child: Text(
+        '$orden',
+        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+      ),
     );
   }
 }

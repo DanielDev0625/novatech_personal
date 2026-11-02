@@ -6,6 +6,7 @@ import '../../core/api/cliente_api.dart';
 import '../../core/api/modelos.dart';
 import '../../core/formato.dart';
 import '../../core/tema/tema.dart';
+import '../../core/widgets/adaptable.dart';
 import '../../core/widgets/componentes.dart';
 import '../../core/widgets/scaffold_rol.dart';
 import '../../core/widgets/vista_async.dart';
@@ -125,63 +126,65 @@ class _PantallaProgramarHorasState extends ConsumerState<PantallaProgramarHoras>
 
     return Scaffold(
       appBar: barraNovaTech(titulo: 'Horas extra de la semana'),
-      body: VistaAsync(
-        valor: personas,
-        alReintentar: () => ref.invalidate(horariosProvider),
-        datos: (lista) {
-          final porId = {for (final p in lista) p.usuarioId: p};
-          return Column(
-            children: [
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    ..._yaProgramadas(semana.valueOrNull ?? const []),
-                    for (final MapEntry(key: id, value: plan) in _planes.entries)
-                      if (porId[id] case final persona?) _tarjetaPersona(persona, plan),
-                    Card(
-                      clipBehavior: Clip.antiAlias,
-                      child: ListTile(
-                        title: const Text('Agregar persona'),
-                        trailing: const Icon(Icons.add),
-                        onTap: () => _agregar(lista),
+      body: ContenidoCentrado(
+        child: VistaAsync(
+          valor: personas,
+          alReintentar: () => ref.invalidate(horariosProvider),
+          datos: (lista) {
+            final porId = {for (final p in lista) p.usuarioId: p};
+            return Column(
+              children: [
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      ..._yaProgramadas(semana.valueOrNull ?? const []),
+                      for (final MapEntry(key: id, value: plan) in _planes.entries)
+                        if (porId[id] case final persona?) _tarjetaPersona(persona, plan),
+                      Card(
+                        clipBehavior: Clip.antiAlias,
+                        child: ListTile(
+                          title: const Text('Agregar persona'),
+                          trailing: const Icon(Icons.add),
+                          onTap: () => _agregar(lista),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: ColoresNovaTech.naranja.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: ColoresNovaTech.naranja.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Text(
+                          'Vence el domingo a medianoche y no se copia a la semana siguiente. '
+                          'Quedan aprobadas de una vez.',
+                          style: TextStyle(color: Color(0xFF8A4B00)),
+                        ),
                       ),
-                      child: const Text(
-                        'Vence el domingo a medianoche y no se copia a la semana siguiente. '
-                        'Quedan aprobadas de una vez.',
-                        style: TextStyle(color: Color(0xFF8A4B00)),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SafeArea(
-                top: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-                  child: FilledButton(
-                    onPressed: _guardando || _planes.isEmpty ? null : _guardar,
-                    child: _guardando
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
-                          )
-                        : const Text('Guardar programación'),
+                    ],
                   ),
                 ),
-              ),
-            ],
-          );
-        },
+                SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                    child: FilledButton(
+                      onPressed: _guardando || _planes.isEmpty ? null : _guardar,
+                      child: _guardando
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                            )
+                          : const Text('Guardar programación'),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -206,7 +209,9 @@ class _PantallaProgramarHorasState extends ConsumerState<PantallaProgramarHoras>
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(child: Text(nombre, style: const TextStyle(fontWeight: FontWeight.w600))),
+                      Expanded(
+                        child: Text(nombre, style: const TextStyle(fontWeight: FontWeight.w600)),
+                      ),
                       Expanded(
                         child: Wrap(
                           alignment: WrapAlignment.end,
@@ -273,7 +278,9 @@ class _PantallaProgramarHorasState extends ConsumerState<PantallaProgramarHoras>
             const SizedBox(height: 8),
             Row(
               children: [
-                const Expanded(child: Text('Hora de fin', style: TextStyle(color: ColoresNovaTech.textoSuave))),
+                const Expanded(
+                  child: Text('Hora de fin', style: TextStyle(color: ColoresNovaTech.textoSuave)),
+                ),
                 ActionChip(
                   label: Text('${horaApi(plan.hora.hour, plan.hora.minute)} ▾'),
                   onPressed: () => _elegirHora(plan),
@@ -317,8 +324,8 @@ class _ChipDia extends StatelessWidget {
             color: elegido
                 ? Colors.white
                 : habilitado
-                    ? ColoresNovaTech.texto
-                    : ColoresNovaTech.borde,
+                ? ColoresNovaTech.texto
+                : ColoresNovaTech.borde,
           ),
         ),
       ),
