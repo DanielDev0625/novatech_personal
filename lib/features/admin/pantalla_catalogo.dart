@@ -1,4 +1,4 @@
-import 'package:file_picker/file_picker.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -17,22 +17,32 @@ class PantallaCatalogo extends ConsumerStatefulWidget {
   ConsumerState<PantallaCatalogo> createState() => _PantallaCatalogoState();
 }
 
+/// Excel que acepta la importación (extensión para escritorio, tipo MIME para Android).
+const _tiposExcel = XTypeGroup(
+  label: 'Excel',
+  extensions: ['xlsx', 'xls'],
+  mimeTypes: [
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-excel',
+  ],
+  uniformTypeIdentifiers: ['org.openxmlformats.spreadsheetml.sheet', 'com.microsoft.excel.xls'],
+);
+
+/// Archivo elegido, ya leído.
+typedef _Archivo = ({String name, List<int> bytes});
+
 class _PantallaCatalogoState extends ConsumerState<PantallaCatalogo> {
-  PlatformFile? _archivo;
+  _Archivo? _archivo;
   Object? _vistaPrevia;
   Object? _resultado;
   bool _cargando = false;
 
   Future<void> _elegirExcel() async {
-    final elegido = await FilePicker.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: const ['xlsx', 'xls'],
-      withData: true,
-    );
-    final archivo = elegido?.files.singleOrNull;
-    if (archivo == null || archivo.bytes == null) return;
+    final elegido = await openFile(acceptedTypeGroups: const [_tiposExcel]);
+    if (elegido == null) return;
+    final bytes = await elegido.readAsBytes();
     setState(() {
-      _archivo = archivo;
+      _archivo = (name: elegido.name, bytes: bytes);
       _vistaPrevia = null;
       _resultado = null;
     });
@@ -46,7 +56,7 @@ class _PantallaCatalogoState extends ConsumerState<PantallaCatalogo> {
     try {
       final respuesta = await ref
           .read(apiAdminProvider)
-          .importarCatalogo(archivo.bytes!, archivo.name, confirmar: confirmar);
+          .importarCatalogo(archivo.bytes, archivo.name, confirmar: confirmar);
       if (!mounted) return;
       setState(() => confirmar ? _resultado = respuesta : _vistaPrevia = respuesta);
       if (confirmar) mostrarMensaje(context, 'Catálogo importado.');

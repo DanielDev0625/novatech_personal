@@ -104,7 +104,8 @@ Pestañas: **Usuarios · Parámetros · Catálogo · Stats**.
   no reemplazarlo por un valor inventado.
 - La lectura de **factura PDF con IA** y «Reportar problema» del transportista aparecen en el diseño
   pero el backend aún no tiene ese servicio; la factura se muestra como «próximamente».
-- Permisos: cámara y ubicación en `AndroidManifest.xml` e `Info.plist`.
+- Permisos: cámara y ubicación en `AndroidManifest.xml` e `Info.plist`. El Excel se elige con
+  `file_selector` (selector oficial de Flutter).
 - Sin cambios en el backend.
 
 ## Estructura
