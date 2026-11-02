@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/api/cliente_api.dart';
 import '../../core/tema/tema.dart';
+import '../../core/widgets/componentes.dart';
 import '../../core/widgets/escaner.dart';
+import '../../core/widgets/scaffold_rol.dart';
 import '../../core/widgets/vista_async.dart';
 import 'api_operario.dart';
 import 'modelos_operario.dart';
@@ -19,8 +21,9 @@ class PantallaAlistar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final pedido = ref.watch(pedidoProvider(pedidoId));
+    final codigo = pedido.valueOrNull?.codigo;
     return Scaffold(
-      appBar: AppBar(title: Text(pedido.valueOrNull?.codigo ?? 'Alistamiento')),
+      appBar: barraNovaTech(titulo: codigo == null ? 'Alistamiento' : 'Alistando $codigo'),
       body: VistaAsync(
         valor: pedido,
         alReintentar: () => ref.invalidate(pedidoProvider(pedidoId)),
@@ -81,7 +84,7 @@ class _AlistamientoState extends ConsumerState<_Alistamiento> {
       case ResultadoLectura.sumado:
         HapticFeedback.lightImpact();
         SystemSound.play(SystemSoundType.click);
-        _avisar('+1 ${linea!.nombre} (${_conteo.escaneados(linea.productoId)}/${linea.cantidad})', bueno: true);
+        _avisar('+1 ${linea!.nombre} (${_conteo.escaneados(linea.productoId)} de ${linea.cantidad})', bueno: true);
       case ResultadoLectura.yaCompleto:
         HapticFeedback.heavyImpact();
         _avisar('Ya están todas las unidades de ${linea!.nombre}.', bueno: false);
@@ -138,21 +141,17 @@ class _AlistamientoState extends ConsumerState<_Alistamiento> {
     final completo = _conteo.completo;
     return Column(
       children: [
-        VistaCamara(alto: 220, alLeer: _alLeer),
-        _BarraAviso(
-          texto: _aviso ?? 'Apunta la cámara al código de cada unidad (o cuenta con + y −).',
-          color: _aviso == null
-              ? ColoresNovaTech.marino
-              : (_avisoBueno ? ColoresNovaTech.verde : ColoresNovaTech.rojo),
-        ),
         Expanded(
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            padding: const EdgeInsets.all(16),
             children: [
               if (widget.pedido.cliente != null)
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Text('Cliente: ${widget.pedido.cliente}'),
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    'Cliente: ${widget.pedido.cliente}',
+                    style: const TextStyle(color: ColoresNovaTech.textoSuave),
+                  ),
                 ),
               for (final linea in _conteo.lineas)
                 _LineaAlistamiento(
@@ -161,13 +160,35 @@ class _AlistamientoState extends ConsumerState<_Alistamiento> {
                   onMenos: _enviando ? null : () => _corregir(linea, sumar: false),
                   onMas: _enviando ? null : () => _corregir(linea, sumar: true),
                 ),
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: VistaCamara(alto: 200, alLeer: _alLeer),
+              ),
+              const SizedBox(height: 8),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: _aviso == null
+                    ? const Text(
+                        'Escanea cada unidad o usa + / −',
+                        key: ValueKey('ayuda'),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: ColoresNovaTech.textoSuave),
+                      )
+                    : Insignia(
+                        key: ValueKey(_aviso),
+                        texto: _aviso!,
+                        color: _avisoBueno ? ColoresNovaTech.verde : ColoresNovaTech.rojo,
+                        icono: _avisoBueno ? Icons.check : Icons.error_outline,
+                      ),
+              ),
             ],
           ),
         ),
         SafeArea(
           top: false,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -176,41 +197,22 @@ class _AlistamientoState extends ConsumerState<_Alistamiento> {
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 8),
-                FilledButton.icon(
+                FilledButton(
                   style: FilledButton.styleFrom(backgroundColor: ColoresNovaTech.verde),
                   onPressed: completo && !_enviando ? _listo : null,
-                  icon: _enviando
+                  child: _enviando
                       ? const SizedBox(
-                          width: 20,
-                          height: 20,
+                          width: 22,
+                          height: 22,
                           child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
                         )
-                      : const Icon(Icons.local_shipping_outlined),
-                  label: const Text('Listo para envío'),
+                      : const Text('Listo para envío'),
                 ),
               ],
             ),
           ),
         ),
       ],
-    );
-  }
-}
-
-class _BarraAviso extends StatelessWidget {
-  const _BarraAviso({required this.texto, required this.color});
-
-  final String texto;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      width: double.infinity,
-      color: color,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Text(texto, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
     );
   }
 }
@@ -232,38 +234,39 @@ class _LineaAlistamiento extends StatelessWidget {
   Widget build(BuildContext context) {
     final completa = escaneados == linea.cantidad;
     return Card(
-      color: completa ? ColoresNovaTech.verde.withValues(alpha: 0.08) : null,
+      shape: completa
+          ? RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: ColoresNovaTech.verde),
+            )
+          : null,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Row(
+        padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              completa ? Icons.check_circle : Icons.radio_button_unchecked,
-              color: completa ? ColoresNovaTech.verde : Colors.black26,
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(linea.nombre, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                      Text('SKU ${linea.sku}', style: const TextStyle(color: ColoresNovaTech.textoSuave, fontSize: 13)),
+                    ],
+                  ),
+                ),
+                Pasos(
+                  texto: '$escaneados de ${linea.cantidad}',
+                  onMenos: escaneados > 0 ? onMenos : null,
+                  onMas: completa ? null : onMas,
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(linea.nombre, style: const TextStyle(fontWeight: FontWeight.w600)),
-                  Text(linea.sku, style: const TextStyle(color: Colors.black54, fontSize: 13)),
-                ],
-              ),
-            ),
-            IconButton(
-              tooltip: 'Quitar una unidad',
-              onPressed: escaneados > 0 ? onMenos : null,
-              icon: const Icon(Icons.remove_circle_outline),
-            ),
-            Text(
-              '$escaneados/${linea.cantidad}',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-            ),
-            IconButton(
-              tooltip: 'Sumar una unidad',
-              onPressed: completa ? null : onMas,
-              icon: const Icon(Icons.add_circle_outline),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: BarraAvance(valor: linea.cantidad == 0 ? 0 : escaneados / linea.cantidad),
             ),
           ],
         ),

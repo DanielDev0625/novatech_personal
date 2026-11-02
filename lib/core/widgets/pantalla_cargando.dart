@@ -15,9 +15,13 @@ class PantallaCargando extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            LogoNovaTech(),
-            SizedBox(height: 32),
-            CircularProgressIndicator(color: Colors.white),
+            LogoNovaTech.horizontalBlanco(alto: 72),
+            SizedBox(height: 40),
+            SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+            ),
           ],
         ),
       ),

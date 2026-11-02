@@ -5,8 +5,24 @@ const _dias = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 
 
 String _dos(int n) => n.toString().padLeft(2, '0');
 
-/// «14:05»
-String hora(DateTime fecha) => '${_dos(fecha.hour)}:${_dos(fecha.minute)}';
+/// «14:05», «7:02»
+String hora(DateTime fecha) => '${fecha.hour}:${_dos(fecha.minute)}';
+
+/// «18:00» o «18:00:00» → (18, 0). null si no se entiende.
+(int, int)? leerHora(String? texto) {
+  final partes = texto?.split(':');
+  if (partes == null || partes.length < 2) return null;
+  final h = int.tryParse(partes[0]);
+  final m = int.tryParse(partes[1]);
+  if (h == null || m == null) return null;
+  return (h, m);
+}
+
+/// Hora del servidor para mostrar: «07:00:00» → «7:00».
+String horaCorta(String texto) {
+  final hm = leerHora(texto);
+  return hm == null ? texto : '${hm.$1}:${_dos(hm.$2)}';
+}
 
 /// «3 nov»
 String fechaCorta(DateTime fecha) => '${fecha.day} ${_meses[fecha.month - 1]}';

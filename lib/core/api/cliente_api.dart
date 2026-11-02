@@ -97,6 +97,8 @@ class ClienteApi {
   /// Se llama cuando el servidor dice que la sesión ya no sirve.
   void Function()? alNoAutorizado;
 
+  static get instancia => null;
+
   // ---- Métodos genéricos (los usarán las pantallas de las fases siguientes) ----
 
   Future<dynamic> get(String ruta, {Map<String, dynamic>? parametros}) async {
@@ -108,9 +110,50 @@ class ClienteApi {
     }
   }
 
-  Future<dynamic> post(String ruta, {Object? datos}) async {
+  Future<dynamic> post(String ruta, {Object? datos, Map<String, dynamic>? parametros}) async {
     try {
-      final r = await _dio.post(ruta, data: datos);
+      final r = await _dio.post(ruta, data: datos, queryParameters: parametros);
+      return r.data;
+    } on DioException catch (e) {
+      throw errorDesde(e);
+    }
+  }
+
+  Future<dynamic> put(String ruta, {Object? datos}) async {
+    try {
+      final r = await _dio.put(ruta, data: datos);
+      return r.data;
+    } on DioException catch (e) {
+      throw errorDesde(e);
+    }
+  }
+
+  Future<dynamic> patch(String ruta, {Object? datos}) async {
+    try {
+      final r = await _dio.patch(ruta, data: datos);
+      return r.data;
+    } on DioException catch (e) {
+      throw errorDesde(e);
+    }
+  }
+
+  /// Sube un archivo como formulario (campo [campo]).
+  Future<dynamic> subirArchivo(
+    String ruta, {
+    required List<int> bytes,
+    required String nombre,
+    String campo = 'archivo',
+    Map<String, dynamic>? parametros,
+  }) async {
+    try {
+      final formulario = FormData.fromMap({campo: MultipartFile.fromBytes(bytes, filename: nombre)});
+      final r = await _dio.post(
+        ruta,
+        data: formulario,
+        queryParameters: parametros,
+        // Leer un Excel grande puede tardar más que una petición normal.
+        options: Options(receiveTimeout: const Duration(seconds: 90)),
+      );
       return r.data;
     } on DioException catch (e) {
       throw errorDesde(e);

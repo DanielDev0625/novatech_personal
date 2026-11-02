@@ -18,11 +18,14 @@ void main() {
       expect(Rol.desde(null), Rol.usuario);
     });
 
-    test('cada rol tiene su pantalla de inicio', () {
-      expect(Rol.operario.rutaInicio, '/operario');
-      expect(Rol.transportista.rutaInicio, '/transportista');
-      expect(Rol.gerente.rutaInicio, '/gerencia');
-      expect(Rol.administrador.rutaInicio, '/admin');
+    test('cada rol tiene su parte de la app y su primera pestaña', () {
+      expect(Rol.operario.prefijo, '/operario');
+      expect(Rol.transportista.prefijo, '/transportista');
+      expect(Rol.gerente.prefijo, '/gerencia');
+      expect(Rol.administrador.prefijo, '/admin');
+      for (final rol in Rol.values.where((r) => r.esPersonal)) {
+        expect(rol.rutaInicio.startsWith('${rol.prefijo}/'), isTrue);
+      }
     });
 
     test('solo operario y transportista tienen jornada; el cliente no es personal', () {

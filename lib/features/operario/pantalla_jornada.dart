@@ -1,27 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/api/modelos.dart';
 import '../../core/api/cliente_api.dart';
 import '../../core/formato.dart';
 import '../../core/tema/tema.dart';
+import '../../core/widgets/aviso_salida.dart';
+import '../../core/widgets/componentes.dart';
+import '../../core/widgets/scaffold_rol.dart';
 import '../../core/widgets/vista_async.dart';
 import 'api_operario.dart';
 import 'modelos_operario.dart';
 
-/// «18:00» o «18:00:00» → (18, 0).
-(int, int)? _leerHora(String? texto) {
-  final partes = texto?.split(':');
-  if (partes == null || partes.length < 2) return null;
-  final h = int.tryParse(partes[0]);
-  final m = int.tryParse(partes[1]);
-  if (h == null || m == null) return null;
-  return (h, m);
-}
-
-String _horaCorta(String texto) {
-  final hm = _leerHora(texto);
-  return hm == null ? texto : horaApi(hm.$1, hm.$2);
-}
+/// Color de cada estado de una hora extra.
+Color colorHoraExtra(EstadoHoraExtra estado) => switch (estado) {
+      EstadoHoraExtra.aprobada => ColoresNovaTech.verde,
+      EstadoHoraExtra.rechazada => ColoresNovaTech.rojo,
+      EstadoHoraExtra.solicitada => ColoresNovaTech.naranja,
+    };
 
 /// «Mi jornada»: horario de hoy, horas extra y la solicitud de horas extra.
 class PantallaJornada extends ConsumerWidget {
@@ -55,36 +51,49 @@ class PantallaJornada extends ConsumerWidget {
     final jornada = ref.watch(jornadaHoyProvider);
     final horasExtra = ref.watch(horasExtraProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Mi jornada')),
-      floatingActionButton: FloatingActionButton.extended(
+    return EsqueletoRol(
+      titulo: 'Mi jornada',
+      alRecargar: () => _recargar(ref),
+      accionInferior: FilledButton(
+        style: FilledButton.styleFrom(backgroundColor: ColoresNovaTech.naranja),
         onPressed: () => _solicitar(context, ref, jornada.valueOrNull),
-        icon: const Icon(Icons.more_time),
-        label: const Text('Solicitar horas extra'),
+        child: const Text('Solicitar horas extra'),
       ),
-      body: RefreshIndicator(
-        onRefresh: () => _recargar(ref),
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-          children: [
-            const TituloSeccion('Hoy'),
-            VistaAsync(
-              valor: jornada,
-              alReintentar: () => _recargar(ref),
-              datos: (datos) => _TarjetaHoy(jornada: datos),
-            ),
-            const TituloSeccion('Mis horas extra'),
-            VistaAsync(
-              valor: horasExtra,
-              alReintentar: () => _recargar(ref),
-              datos: (lista) => lista.isEmpty
-                  ? const ListaVacia(icono: Icons.more_time, texto: 'Aún no tienes horas extra.')
-                  : Column(children: [for (final h in lista) _TarjetaHoraExtra(horaExtra: h)]),
-            ),
-          ],
+      hijos: [
+        const AvisoSalida(),
+        VistaAsync(
+          valor: jornada,
+          alReintentar: () => _recargar(ref),
+          datos: (datos) => _TarjetaHoy(jornada: datos),
         ),
-      ),
+        const TituloSeccion('Mis horas extra'),
+        VistaAsync(
+          valor: horasExtra,
+          alReintentar: () => _recargar(ref),
+          datos: (lista) => lista.isEmpty
+              ? const ListaVacia(icono: Icons.more_time, texto: 'Aún no tienes horas extra.')
+              : Card(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Column(
+                      children: [
+                        for (final (i, h) in lista.indexed) ...[
+                          if (i > 0) const Divider(indent: 14, endIndent: 14),
+                          _FilaHoraExtra(horaExtra: h),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+        ),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(4, 8, 4, 0),
+          child: Text(
+            'Las horas extra programadas vencen el domingo a medianoche.',
+            style: TextStyle(color: ColoresNovaTech.textoSuave, fontSize: 13),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -94,40 +103,49 @@ class _TarjetaHoy extends StatelessWidget {
 
   final JornadaHoy jornada;
 
-  Widget _fila(IconData icono, String etiqueta, String valor) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+  Widget _fila(String etiqueta, String valor) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
         child: Row(
           children: [
-            Icon(icono, size: 20, color: ColoresNovaTech.azul),
-            const SizedBox(width: 8),
-            Expanded(child: Text(etiqueta)),
-            Text(valor, style: const TextStyle(fontWeight: FontWeight.w700)),
+            Expanded(child: Text(etiqueta, style: const TextStyle(color: ColoresNovaTech.textoSuave))),
+            Text(valor, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
           ],
         ),
       );
+
+  /// Parte del día de trabajo que ya pasó (0 a 1).
+  double _avance() {
+    final inicio = leerHora(jornada.horaInicio);
+    final salida = leerHora(jornada.horaSalida);
+    if (inicio == null || salida == null) return 0;
+    final ahora = DateTime.now();
+    final minutosAhora = ahora.hour * 60 + ahora.minute;
+    final desde = inicio.$1 * 60 + inicio.$2;
+    final hasta = salida.$1 * 60 + salida.$2;
+    if (hasta <= desde) return 0;
+    return ((minutosAhora - desde) / (hasta - desde)).clamp(0, 1).toDouble();
+  }
 
   @override
   Widget build(BuildContext context) {
     final entrada = jornada.entradaReal;
     final extra = jornada.horaExtraHasta;
-    final sesion = jornada.sesionHasta;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _fila(Icons.schedule, 'Horario', '${_horaCorta(jornada.horaInicio)} – ${_horaCorta(jornada.horaSalida)}'),
-            _fila(Icons.login, 'Entrada', entrada != null ? hora(entrada) : 'sin registrar'),
-            if (extra != null) _fila(Icons.more_time, 'Horas extra aprobadas hasta', _horaCorta(extra)),
-            if (sesion != null) _fila(Icons.lock_clock, 'Tu sesión dura hasta', hora(sesion)),
-            if (jornada.avisoSalida)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  'Tu jornada termina en ${jornada.minutosParaSalida} minutos.',
-                  style: const TextStyle(color: ColoresNovaTech.naranja, fontWeight: FontWeight.w700),
-                ),
-              ),
+            _fila('Entrada real', entrada != null ? hora(entrada) : '—'),
+            _fila('Salida configurada', horaCorta(jornada.horaSalida)),
+            if (extra != null) _fila('Horas extra hasta', horaCorta(extra)),
+            const SizedBox(height: 10),
+            BarraAvance(valor: _avance(), color: ColoresNovaTech.azul),
+            const SizedBox(height: 10),
+            Insignia(
+              texto: entrada == null ? 'Estado: sin entrada' : 'Estado: en curso',
+              color: entrada == null ? ColoresNovaTech.naranja : ColoresNovaTech.verde,
+            ),
           ],
         ),
       ),
@@ -135,38 +153,32 @@ class _TarjetaHoy extends StatelessWidget {
   }
 }
 
-class _TarjetaHoraExtra extends StatelessWidget {
-  const _TarjetaHoraExtra({required this.horaExtra});
+class _FilaHoraExtra extends StatelessWidget {
+  const _FilaHoraExtra({required this.horaExtra});
 
   final HoraExtra horaExtra;
 
   @override
   Widget build(BuildContext context) {
-    final color = switch (horaExtra.estado) {
-      EstadoHoraExtra.aprobada => ColoresNovaTech.verde,
-      EstadoHoraExtra.rechazada => ColoresNovaTech.rojo,
-      EstadoHoraExtra.solicitada => ColoresNovaTech.naranja,
-    };
     final detalles = [
       if (horaExtra.motivo != null) horaExtra.motivo!.etiqueta,
       if (horaExtra.esCorreccion) 'corrección',
       if (horaExtra.resueltaPor != null) 'por ${horaExtra.resueltaPor}',
     ];
-    return Card(
-      child: ListTile(
-        leading: const Icon(Icons.more_time),
-        title: Text('${diaRelativo(horaExtra.fecha)} · hasta las ${_horaCorta(horaExtra.horaFin)}'),
-        subtitle: detalles.isEmpty ? null : Text(detalles.join(' · ')),
-        trailing: Chip(
-          label: Text(horaExtra.estado.etiqueta, style: const TextStyle(color: Colors.white)),
-          backgroundColor: color,
-          side: BorderSide.none,
-          visualDensity: VisualDensity.compact,
-        ),
+    final dia = diaRelativo(horaExtra.fecha);
+    return ListTile(
+      title: Text('${dia[0].toUpperCase()}${dia.substring(1)}'),
+      subtitle: detalles.isEmpty ? null : Text(detalles.join(' · ')),
+      trailing: Insignia(
+        texto: horaExtra.estado == EstadoHoraExtra.aprobada
+            ? 'hasta ${horaCorta(horaExtra.horaFin)}'
+            : '${horaExtra.estado.etiqueta} · ${horaCorta(horaExtra.horaFin)}',
+        color: colorHoraExtra(horaExtra.estado),
       ),
     );
   }
 }
+
 
 /// Hoja para pedir horas extra: día, hora y motivo se eligen, no se escriben.
 class _SolicitarHoraExtra extends ConsumerStatefulWidget {
@@ -190,7 +202,7 @@ class _SolicitarHoraExtraState extends ConsumerState<_SolicitarHoraExtra> {
     super.initState();
     _fecha = soloFecha(DateTime.now());
     // Sugerencia: una hora después de la salida normal.
-    final salida = _leerHora(widget.horaSalida) ?? (17, 0);
+    final salida = leerHora(widget.horaSalida) ?? (17, 0);
     _hora = TimeOfDay(hour: (salida.$1 + 1).clamp(0, 23), minute: salida.$2);
   }
 
@@ -255,7 +267,7 @@ class _SolicitarHoraExtraState extends ConsumerState<_SolicitarHoraExtra> {
           children: [
             const Text('Solicitar horas extra', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
             const SizedBox(height: 4),
-            const Text('Solo cuentan cuando gerencia las aprueba.', style: TextStyle(color: Colors.black54)),
+            const Text('Solo cuentan cuando gerencia las aprueba.', style: TextStyle(color: ColoresNovaTech.textoSuave)),
             const SizedBox(height: 16),
             const Text('Día', style: TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 4),

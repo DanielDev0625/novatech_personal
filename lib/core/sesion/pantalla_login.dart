@@ -96,120 +96,131 @@ class _PantallaLoginState extends ConsumerState<PantallaLogin> {
     final mensaje = _error ?? sesion.aviso;
 
     return Scaffold(
-      backgroundColor: ColoresNovaTech.marino,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const LogoNovaTech(),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'App del personal',
-                    style: TextStyle(color: Colors.white70, fontSize: 15),
-                  ),
-                  const SizedBox(height: 32),
-                  Card(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const Text(
-                            'Iniciar sesión',
-                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+      body: Column(
+        children: [
+          SizedBox(height: MediaQuery.paddingOf(context).top),
+          const FranjaColores(ancho: double.infinity, alto: 5),
+          Expanded(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 400),
+                  child: AutofillGroup(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Center(child: LogoNovaTech.vertical(alto: 130)),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'App del personal',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: ColoresNovaTech.textoSuave, fontSize: 15),
+                        ),
+                        const SizedBox(height: 36),
+                        TextField(
+                          controller: _usuario,
+                          enabled: !_cargando,
+                          autocorrect: false,
+                          enableSuggestions: false,
+                          textInputAction: TextInputAction.next,
+                          autofillHints: const [AutofillHints.username],
+                          decoration: const InputDecoration(
+                            hintText: 'Usuario',
+                            prefixIcon: Icon(Icons.person_outline),
                           ),
-                          const SizedBox(height: 16),
-                          TextField(
-                            controller: _usuario,
-                            enabled: !_cargando,
-                            autocorrect: false,
-                            enableSuggestions: false,
-                            textInputAction: TextInputAction.next,
-                            autofillHints: const [AutofillHints.username],
-                            decoration: const InputDecoration(
-                              labelText: 'Usuario',
-                              prefixIcon: Icon(Icons.person_outline),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: _password,
+                          enabled: !_cargando,
+                          obscureText: _ocultar,
+                          autocorrect: false,
+                          enableSuggestions: false,
+                          textInputAction: TextInputAction.done,
+                          autofillHints: const [AutofillHints.password],
+                          onSubmitted: (_) => _ingresar(),
+                          decoration: InputDecoration(
+                            hintText: 'Contraseña',
+                            prefixIcon: const Icon(Icons.lock_outline),
+                            suffixIcon: IconButton(
+                              tooltip: _ocultar ? 'Mostrar contraseña' : 'Ocultar contraseña',
+                              icon: Icon(_ocultar ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                              onPressed: () => setState(() => _ocultar = !_ocultar),
                             ),
                           ),
+                        ),
+                        if (mensaje != null) ...[
                           const SizedBox(height: 12),
-                          TextField(
-                            controller: _password,
-                            enabled: !_cargando,
-                            obscureText: _ocultar,
-                            autocorrect: false,
-                            enableSuggestions: false,
-                            textInputAction: TextInputAction.done,
-                            autofillHints: const [AutofillHints.password],
-                            onSubmitted: (_) => _ingresar(),
-                            decoration: InputDecoration(
-                              labelText: 'Contraseña',
-                              prefixIcon: const Icon(Icons.lock_outline),
-                              suffixIcon: IconButton(
-                                tooltip: _ocultar ? 'Mostrar contraseña' : 'Ocultar contraseña',
-                                icon: Icon(_ocultar ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-                                onPressed: () => setState(() => _ocultar = !_ocultar),
-                              ),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: ColoresNovaTech.rojo.withValues(alpha: 0.07),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: ColoresNovaTech.rojo.withValues(alpha: 0.35)),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(Icons.error_outline, color: ColoresNovaTech.rojo, size: 20),
+                                const SizedBox(width: 8),
+                                Expanded(child: Text(mensaje)),
+                              ],
                             ),
                           ),
-                          if (mensaje != null) ...[
-                            const SizedBox(height: 12),
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: ColoresNovaTech.rojo.withOpacity(0.08),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: ColoresNovaTech.rojo.withOpacity(0.4)),
-                              ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Icon(Icons.error_outline, color: ColoresNovaTech.rojo, size: 20),
-                                  const SizedBox(width: 8),
-                                  Expanded(child: Text(mensaje)),
-                                ],
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 16),
-                          FilledButton(
-                            onPressed: _cargando ? null : _ingresar,
-                            child: _cargando
-                                ? const SizedBox(
-                                    height: 22,
-                                    width: 22,
-                                    child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
-                                  )
-                                : const Text('Ingresar'),
-                          ),
-                          if (puedeHuella) ...[
-                            const SizedBox(height: 12),
-                            OutlinedButton.icon(
-                              onPressed: _cargando ? null : _entrarConHuella,
-                              icon: const Icon(Icons.fingerprint),
-                              label: const Text('Entrar con huella'),
-                            ),
-                            TextButton(
-                              onPressed: _cargando
-                                  ? null
-                                  : () => ref.read(sesionProvider.notifier).olvidarHuella(),
-                              child: const Text('Usar otra cuenta (olvidar huella)'),
-                            ),
-                          ],
                         ],
-                      ),
+                        const SizedBox(height: 16),
+                        FilledButton(
+                          onPressed: _cargando ? null : _ingresar,
+                          child: _cargando
+                              ? const SizedBox(
+                                  height: 22,
+                                  width: 22,
+                                  child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                                )
+                              : const Text('Iniciar sesión'),
+                        ),
+                        if (puedeHuella) ...[
+                          const SizedBox(height: 24),
+                          Center(
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(16),
+                              onTap: _cargando ? null : _entrarConHuella,
+                              child: const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                                child: Column(
+                                  children: [
+                                    Icon(Icons.fingerprint, size: 52, color: ColoresNovaTech.azul),
+                                    SizedBox(height: 4),
+                                    Text('Entrar con huella', style: TextStyle(color: ColoresNovaTech.textoSuave)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: _cargando ? null : () => ref.read(sesionProvider.notifier).olvidarHuella(),
+                            child: const Text('Usar otra cuenta'),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-                ],
+                ),
               ),
             ),
           ),
-        ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Text(
+                'El rol lo define tu cuenta',
+                style: TextStyle(color: ColoresNovaTech.textoSuave.withValues(alpha: 0.8), fontSize: 13),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -8,6 +8,10 @@ class Punto {
   final double longitud;
 
   Map<String, dynamic> toJson() => {'latitud': latitud, 'longitud': longitud};
+
+  /// Distancia en metros hasta otra coordenada.
+  double metrosHasta(double otraLatitud, double otraLongitud) =>
+      Geolocator.distanceBetween(latitud, longitud, otraLatitud, otraLongitud);
 }
 
 /// Pide permiso de ubicación si hace falta. Devuelve false si no hay GPS o se niega.

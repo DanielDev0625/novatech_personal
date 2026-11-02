@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/api/modelos.dart';
 import '../../core/api/cliente_api.dart';
 import '../../core/tema/tema.dart';
+import '../../core/widgets/scaffold_rol.dart';
 import '../../core/widgets/vista_async.dart';
 import 'api_operario.dart';
 import 'modelos_operario.dart';
@@ -18,7 +20,9 @@ class PantallaRecibir extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final compra = ref.watch(compraProvider(compraId));
     return Scaffold(
-      appBar: AppBar(title: Text(compra.valueOrNull?.codigo ?? 'Recibir compra')),
+      appBar: barraNovaTech(
+        titulo: compra.valueOrNull == null ? 'Recepción' : 'Recepción ${compra.valueOrNull!.codigo}',
+      ),
       body: VistaAsync(
         valor: compra,
         alReintentar: () => ref.invalidate(compraProvider(compraId)),
@@ -119,7 +123,7 @@ class _ConteoState extends ConsumerState<_Conteo> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(compra.producto, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-                      Text(compra.sku, style: const TextStyle(color: Colors.black54)),
+                      Text(compra.sku, style: const TextStyle(color: ColoresNovaTech.textoSuave)),
                       if (compra.proveedor != null) Text('Proveedor: ${compra.proveedor}'),
                       const SizedBox(height: 8),
                       Text(
@@ -192,7 +196,7 @@ class _ConteoState extends ConsumerState<_Conteo> {
                       height: 22,
                       child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
                     )
-                  : const Text('Registrar recepción'),
+                  : const Text('Confirmar recepción'),
             ),
           ),
         ),

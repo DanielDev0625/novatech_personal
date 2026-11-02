@@ -77,9 +77,9 @@ class ListaVacia extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
       child: Column(
         children: [
-          Icon(icono, size: 48, color: Colors.black26),
+          Icon(icono, size: 48, color: ColoresNovaTech.borde),
           const SizedBox(height: 8),
-          Text(texto, textAlign: TextAlign.center, style: const TextStyle(color: Colors.black54)),
+          Text(texto, textAlign: TextAlign.center, style: const TextStyle(color: ColoresNovaTech.textoSuave)),
         ],
       ),
     );

@@ -24,31 +24,48 @@ class FranjaColores extends StatelessWidget {
   }
 }
 
-/// Logo de texto con las franjas. Para usar el logo real, súbelo a assets/img
-/// y reemplaza este widget por un Image.asset.
-class LogoNovaTech extends StatelessWidget {
-  const LogoNovaTech({super.key, this.tamano = 34, this.color = Colors.white});
+enum _VarianteLogo { vertical, horizontalBlanco }
 
-  final double tamano;
-  final Color color;
+/// Logo oficial de NovaTech.
+///  - [LogoNovaTech.vertical]: espiral con el nombre debajo en negro, para fondos claros.
+///  - [LogoNovaTech.horizontalBlanco]: espiral y nombre en blanco al lado, para el azul marino.
+class LogoNovaTech extends StatelessWidget {
+  const LogoNovaTech.vertical({super.key, this.alto = 120}) : _variante = _VarianteLogo.vertical;
+
+  const LogoNovaTech.horizontalBlanco({super.key, this.alto = 56}) : _variante = _VarianteLogo.horizontalBlanco;
+
+  final double alto;
+  final _VarianteLogo _variante;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          'NOVATECH',
-          style: TextStyle(
-            fontSize: tamano,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.5,
-            color: color,
-          ),
-        ),
-        const SizedBox(height: 8),
-        FranjaColores(ancho: tamano * 4.2),
-      ],
+    final archivo = switch (_variante) {
+      _VarianteLogo.vertical => 'assets/img/logo_vertical.png',
+      _VarianteLogo.horizontalBlanco => 'assets/img/logo_horizontal_blanco.png',
+    };
+    return Semantics(
+      label: 'NovaTech',
+      image: true,
+      child: Image.asset(archivo, height: alto, fit: BoxFit.contain, filterQuality: FilterQuality.medium),
+    );
+  }
+}
+
+/// Solo la espiral del logo (para encabezados y espacios pequeños).
+class SimboloNovaTech extends StatelessWidget {
+  const SimboloNovaTech({super.key, this.tamano = 32});
+
+  final double tamano;
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      'assets/img/simbolo.png',
+      width: tamano,
+      height: tamano,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.medium,
+      excludeFromSemantics: true,
     );
   }
 }

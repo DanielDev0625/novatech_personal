@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/formato.dart';
 import '../../core/tema/tema.dart';
+import '../../core/widgets/scaffold_rol.dart';
 import '../../core/widgets/vista_async.dart';
 import 'api_transportista.dart';
 import 'modelos_transportista.dart';
@@ -23,32 +24,26 @@ class PantallaLiquidacion extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final liquidacion = ref.watch(liquidacionProvider);
-    return Scaffold(
-      appBar: AppBar(title: const Text('Mi liquidación')),
-      body: RefreshIndicator(
-        onRefresh: () => _recargar(ref),
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
-          children: [
-            VistaAsync(
-              valor: liquidacion,
-              alReintentar: () => _recargar(ref),
-              datos: (datos) => Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _Totales(resumen: datos),
-                  const TituloSeccion('Entregas'),
-                  if (datos.items.isEmpty)
-                    const ListaVacia(icono: Icons.payments_outlined, texto: 'Aún no tienes entregas liquidadas.')
-                  else
-                    for (final item in datos.items) _TarjetaLiquidacion(item: item),
-                ],
-              ),
-            ),
-          ],
+    return EsqueletoRol(
+      titulo: 'Mi liquidación',
+      alRecargar: () => _recargar(ref),
+      hijos: [
+        VistaAsync(
+          valor: liquidacion,
+          alReintentar: () => _recargar(ref),
+          datos: (datos) => Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _Totales(resumen: datos),
+              const TituloSeccion('Entregas'),
+              if (datos.items.isEmpty)
+                const ListaVacia(icono: Icons.payments_outlined, texto: 'Aún no tienes entregas liquidadas.')
+              else
+                for (final item in datos.items) _TarjetaLiquidacion(item: item),
+            ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }
@@ -65,7 +60,7 @@ class _Totales extends StatelessWidget {
               pesos(valor),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: color),
             ),
-            Text(etiqueta, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+            Text(etiqueta, style: const TextStyle(fontSize: 12, color: ColoresNovaTech.textoSuave)),
           ],
         ),
       );

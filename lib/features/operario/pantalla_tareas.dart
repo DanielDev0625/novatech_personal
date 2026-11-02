@@ -6,10 +6,14 @@ import '../../core/api/cliente_api.dart';
 import '../../core/api/modelos.dart';
 import '../../core/formato.dart';
 import '../../core/tema/tema.dart';
+import '../../core/widgets/aviso_salida.dart';
+import '../../core/widgets/componentes.dart';
+import '../../core/widgets/scaffold_rol.dart';
 import '../../core/widgets/vista_async.dart';
 import 'api_operario.dart';
 
-/// «Mis tareas»: lo que estoy alistando arriba y la cola (más antiguos primero) abajo.
+/// Inicio del operario, «Mis tareas»: lo que estoy alistando arriba y la cola
+/// (más antiguos primero) abajo, más el acceso a la mercancía por recibir.
 class PantallaTareas extends ConsumerStatefulWidget {
   const PantallaTareas({super.key});
 
@@ -22,8 +26,8 @@ class _PantallaTareasState extends ConsumerState<PantallaTareas> {
   int? _tomando;
 
   Future<void> _recargar() async {
-    ref.invalidate(colaProvider);
-    ref.invalidate(alistandoProvider);
+    recargarOperario(ref);
+    ref.invalidate(jornadaHoyProvider);
     try {
       await Future.wait([ref.read(colaProvider.future), ref.read(alistandoProvider.future)]);
     } catch (_) {
@@ -41,7 +45,6 @@ class _PantallaTareasState extends ConsumerState<PantallaTareas> {
     try {
       await ref.read(apiOperarioProvider).tomar(pedido.id);
       if (!mounted) return;
-      mostrarMensaje(context, 'Tomaste el pedido ${pedido.codigo}.');
       await _abrir(pedido.id);
     } catch (e) {
       if (!mounted) return;
@@ -63,76 +66,99 @@ class _PantallaTareasState extends ConsumerState<PantallaTareas> {
   Widget build(BuildContext context) {
     final alistando = ref.watch(alistandoProvider);
     final cola = ref.watch(colaProvider);
+    final compras = ref.watch(comprasPorRecibirProvider).valueOrNull;
+    final jornada = ref.watch(jornadaHoyProvider).valueOrNull;
+    final progreso = ref.watch(progresoAlistamientoProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Mis tareas')),
-      body: RefreshIndicator(
-        onRefresh: _recargar,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
-          children: [
-            const TituloSeccion('Estoy alistando'),
-            VistaAsync(
-              valor: alistando,
-              alReintentar: _recargar,
-              datos: (lista) => lista.isEmpty
-                  ? const ListaVacia(icono: Icons.inbox_outlined, texto: 'No tienes pedidos en alistamiento.')
-                  : Column(
-                      children: [
-                        for (final pedido in lista)
-                          _TarjetaPedido(
-                            pedido: pedido,
-                            resaltado: true,
-                            accion: FilledButton.icon(
-                              style: FilledButton.styleFrom(minimumSize: const Size(128, 44)),
-                              onPressed: () => _abrir(pedido.id),
-                              icon: const Icon(Icons.qr_code_scanner),
-                              label: const Text('Continuar'),
-                            ),
-                          ),
-                      ],
-                    ),
+    return EsqueletoRol(
+      titulo: 'Mis tareas',
+      chip: jornada == null
+          ? null
+          : ChipEncabezado(
+              icono: Icons.schedule,
+              texto: 'Jornada ${horaCorta(jornada.horaInicio)} a ${horaCorta(jornada.horaSalida)}',
             ),
-            const TituloSeccion('Cola de alistamiento'),
-            VistaAsync(
-              valor: cola,
-              alReintentar: _recargar,
-              datos: (lista) => lista.isEmpty
-                  ? const ListaVacia(icono: Icons.check_circle_outline, texto: 'No hay pedidos en cola.')
-                  : Column(
-                      children: [
-                        for (final pedido in lista)
-                          _TarjetaPedido(
-                            pedido: pedido,
-                            accion: FilledButton(
-                              style: FilledButton.styleFrom(minimumSize: const Size(110, 44)),
-                              onPressed: _tomando == null ? () => _tomar(pedido) : null,
-                              child: _tomando == pedido.id
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
-                                    )
-                                  : const Text('Tomar'),
-                            ),
-                          ),
-                      ],
-                    ),
-            ),
-          ],
+      alRecargar: _recargar,
+      hijos: [
+        const AvisoSalida(),
+        VistaAsync(
+          valor: alistando,
+          alReintentar: _recargar,
+          datos: (lista) => Column(
+            children: [
+              for (final pedido in lista)
+                _TarjetaAlistando(
+                  pedido: pedido,
+                  escaneadas: progreso[pedido.id]?.values.fold<int>(0, (a, b) => a + b) ?? 0,
+                  onTap: () => _abrir(pedido.id),
+                ),
+            ],
+          ),
         ),
-      ),
+        VistaAsync(
+          valor: cola,
+          alReintentar: _recargar,
+          datos: (lista) => lista.isEmpty
+              ? const ListaVacia(icono: Icons.check_circle_outline, texto: 'No hay pedidos en cola.')
+              : Column(
+                  children: [
+                    for (final pedido in lista)
+                      _TarjetaCola(
+                        pedido: pedido,
+                        tomando: _tomando == pedido.id,
+                        habilitado: _tomando == null,
+                        onTomar: () => _tomar(pedido),
+                      ),
+                  ],
+                ),
+        ),
+        if (compras != null && compras.isNotEmpty)
+          Card(
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () => context.go('/operario/recepcion'),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    const Icon(Icons.local_shipping_outlined, color: ColoresNovaTech.naranja),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Recibir mercancía', style: TextStyle(fontWeight: FontWeight.w700)),
+                          Text(
+                            '${compras.length} ${compras.length == 1 ? 'compra aprobada' : 'compras aprobadas'}',
+                            style: const TextStyle(color: ColoresNovaTech.textoSuave),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right, color: ColoresNovaTech.textoSuave),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
 
-class _TarjetaPedido extends StatelessWidget {
-  const _TarjetaPedido({required this.pedido, required this.accion, this.resaltado = false});
+/// «PED-0412 · Registrado · 5 unidades · Tomar tarea».
+class _TarjetaCola extends StatelessWidget {
+  const _TarjetaCola({
+    required this.pedido,
+    required this.tomando,
+    required this.habilitado,
+    required this.onTomar,
+  });
 
   final PedidoResumen pedido;
-  final Widget accion;
-  final bool resaltado;
+  final bool tomando;
+  final bool habilitado;
+  final VoidCallback onTomar;
 
   @override
   Widget build(BuildContext context) {
@@ -143,32 +169,75 @@ class _TarjetaPedido extends StatelessWidget {
       if (creado != null) antiguedad(creado),
       if (prometida != null) 'entrega ${diaRelativo(prometida)}',
     ];
-
     return Card(
-      shape: resaltado
-          ? RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: const BorderSide(color: ColoresNovaTech.azul, width: 2),
-            )
-          : null,
       child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            Row(
+              children: [
+                Expanded(
+                  child: Text(pedido.codigo, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                ),
+                const Insignia(texto: 'Registrado', color: ColoresNovaTech.naranja),
+              ],
+            ),
+            const SizedBox(height: 2),
+            Text(detalles.join(' · '), style: const TextStyle(color: ColoresNovaTech.textoSuave)),
+            const SizedBox(height: 10),
+            FilledButton(
+              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(44)),
+              onPressed: habilitado ? onTomar : null,
+              child: tomando
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                    )
+                  : const Text('Tomar tarea'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// «PED-0409 · Alistando · Escaneadas 2 de 4» con barra de avance.
+class _TarjetaAlistando extends StatelessWidget {
+  const _TarjetaAlistando({required this.pedido, required this.escaneadas, required this.onTap});
+
+  final PedidoResumen pedido;
+  final int escaneadas;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = pedido.unidades;
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Text(pedido.codigo, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-                  if (pedido.cliente != null) Text(pedido.cliente!),
-                  const SizedBox(height: 4),
-                  Text(detalles.join(' · '), style: const TextStyle(color: Colors.black54, fontSize: 13)),
+                  Expanded(
+                    child: Text(pedido.codigo, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                  ),
+                  const Insignia(texto: 'Alistando', color: ColoresNovaTech.azul),
                 ],
               ),
-            ),
-            const SizedBox(width: 12),
-            accion,
-          ],
+              const SizedBox(height: 2),
+              Text('Escaneadas $escaneadas de $total', style: const TextStyle(color: ColoresNovaTech.textoSuave)),
+              const SizedBox(height: 8),
+              BarraAvance(valor: total == 0 ? 0 : escaneadas / total),
+            ],
+          ),
         ),
       ),
     );
