@@ -4,7 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/admin/pantalla_admin.dart';
 import '../../features/gerencia/pantalla_gerencia.dart';
+import '../../features/operario/pantalla_alistar.dart';
+import '../../features/operario/pantalla_jornada.dart';
 import '../../features/operario/pantalla_operario.dart';
+import '../../features/operario/pantalla_recepcion.dart';
+import '../../features/operario/pantalla_recibir.dart';
+import '../../features/operario/pantalla_tareas.dart';
 import '../../features/transportista/pantalla_transportista.dart';
 import '../sesion/pantalla_login.dart';
 import '../sesion/sesion.dart';
@@ -43,7 +48,23 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: '/cargando', builder: (c, e) => const PantallaCargando()),
       GoRoute(path: '/login', builder: (c, e) => const PantallaLogin()),
-      GoRoute(path: '/operario', builder: (c, e) => const PantallaOperario()),
+      GoRoute(
+        path: '/operario',
+        builder: (c, e) => const PantallaOperario(),
+        routes: [
+          GoRoute(path: 'tareas', builder: (c, e) => const PantallaTareas()),
+          GoRoute(
+            path: 'alistar/:id',
+            builder: (c, e) => PantallaAlistar(pedidoId: int.parse(e.pathParameters['id']!)),
+          ),
+          GoRoute(path: 'recepcion', builder: (c, e) => const PantallaRecepcion()),
+          GoRoute(
+            path: 'recibir/:id',
+            builder: (c, e) => PantallaRecibir(compraId: int.parse(e.pathParameters['id']!)),
+          ),
+          GoRoute(path: 'jornada', builder: (c, e) => const PantallaJornada()),
+        ],
+      ),
       GoRoute(path: '/transportista', builder: (c, e) => const PantallaTransportista()),
       GoRoute(path: '/gerencia', builder: (c, e) => const PantallaGerencia()),
       GoRoute(path: '/admin', builder: (c, e) => const PantallaAdmin()),

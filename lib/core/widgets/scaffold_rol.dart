@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/modelos.dart';
+import '../formato.dart';
 import '../sesion/sesion.dart';
 import '../tema/tema.dart';
 import 'marca.dart';
@@ -15,22 +16,27 @@ class ModuloPendiente {
   final String descripcion;
 }
 
-String _hora(DateTime fecha) =>
-    '${fecha.hour.toString().padLeft(2, '0')}:${fecha.minute.toString().padLeft(2, '0')}';
-
 /// Estructura común de la pantalla de inicio de cada rol: barra con el nombre,
-/// botón de salir y la lista de lo que traerán las fases siguientes.
+/// botón de salir, el [contenido] del rol y la lista de lo que traerán las fases siguientes.
 class ScaffoldRol extends ConsumerWidget {
   const ScaffoldRol({
     super.key,
     required this.titulo,
-    required this.fase,
-    required this.modulos,
+    this.fase = '',
+    this.modulos = const [],
+    this.contenido = const [],
+    this.alRecargar,
   });
 
   final String titulo;
   final String fase;
   final List<ModuloPendiente> modulos;
+
+  /// Lo que ya funciona en este rol (va debajo del saludo).
+  final List<Widget> contenido;
+
+  /// Si se da, la lista se puede jalar hacia abajo para recargar.
+  final Future<void> Function()? alRecargar;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -60,8 +66,9 @@ class ScaffoldRol extends ConsumerWidget {
           child: FranjaColores(ancho: double.infinity, alto: 4),
         ),
       ),
-      body: ListView(
+      body: _conRecarga(ListView(
         padding: const EdgeInsets.all(16),
+        physics: const AlwaysScrollableScrollPhysics(),
         children: [
           Card(
             child: Padding(
@@ -81,7 +88,7 @@ class ScaffoldRol extends ConsumerWidget {
                       children: [
                         const Icon(Icons.schedule, size: 18, color: ColoresNovaTech.naranja),
                         const SizedBox(width: 6),
-                        Expanded(child: Text('Tu sesión dura hasta las ${_hora(expira)}.')),
+                        Expanded(child: Text('Tu sesión dura hasta las ${hora(expira)}.')),
                       ],
                     ),
                   ],
@@ -89,24 +96,32 @@ class ScaffoldRol extends ConsumerWidget {
               ),
             ),
           ),
-          const SizedBox(height: 16),
-          Text(
-            'Próximamente · $fase',
-            style: const TextStyle(fontWeight: FontWeight.w700, color: ColoresNovaTech.texto),
-          ),
-          const SizedBox(height: 8),
-          for (final modulo in modulos)
-            Card(
-              child: ListTile(
-                leading: Icon(modulo.icono, color: ColoresNovaTech.azul),
-                title: Text(modulo.titulo),
-                subtitle: Text(modulo.descripcion),
-                trailing: const Icon(Icons.lock_outline, size: 18),
-              ),
+          ...contenido,
+          if (modulos.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text(
+              'Próximamente · $fase',
+              style: const TextStyle(fontWeight: FontWeight.w700, color: ColoresNovaTech.texto),
             ),
+            const SizedBox(height: 8),
+            for (final modulo in modulos)
+              Card(
+                child: ListTile(
+                  leading: Icon(modulo.icono, color: ColoresNovaTech.azul),
+                  title: Text(modulo.titulo),
+                  subtitle: Text(modulo.descripcion),
+                  trailing: const Icon(Icons.lock_outline, size: 18),
+                ),
+              ),
+          ],
         ],
-      ),
+      )),
     );
+  }
+
+  Widget _conRecarga(Widget lista) {
+    final recargar = alRecargar;
+    return recargar == null ? lista : RefreshIndicator(onRefresh: recargar, child: lista);
   }
 
   Future<void> _salir(BuildContext context, WidgetRef ref, Usuario usuario) async {

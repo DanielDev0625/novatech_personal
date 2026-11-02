@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/cliente_api.dart';
@@ -42,13 +44,27 @@ class SesionNotifier extends Notifier<EstadoSesion> {
   final AlmacenSeguro _almacen = AlmacenSeguro();
   final Biometria _biometria = Biometria();
 
+  /// Cierra la sesión sola cuando llega la hora de salida (vencimiento del token).
+  Timer? _cierreAutomatico;
+
   ClienteApi get _api => ref.read(clienteApiProvider);
 
   @override
   EstadoSesion build() {
     _api.alNoAutorizado = _sesionVencida;
+    ref.onDispose(() => _cierreAutomatico?.cancel());
     Future.microtask(restaurar);
     return const EstadoSesion(restaurando: true);
+  }
+
+  void _programarCierre(DateTime? expira) {
+    _cierreAutomatico?.cancel();
+    _cierreAutomatico = null;
+    if (expira == null) return;
+    final falta = expira.difference(DateTime.now());
+    _cierreAutomatico = Timer(falta.isNegative ? Duration.zero : falta, () {
+      _limpiar(aviso: 'Terminó tu jornada. Si tienes horas extra aprobadas, inicia sesión de nuevo.');
+    });
   }
 
   /// Al abrir la app: si quedó una sesión vigente, entra directo.
@@ -73,6 +89,7 @@ class SesionNotifier extends Notifier<EstadoSesion> {
               huellaActiva: huellaActiva,
               huellaDisponible: huellaDisponible,
             );
+            if (actual.rol.tieneJornada) _programarCierre(expira);
             return;
           }
         } catch (_) {
@@ -171,16 +188,20 @@ class SesionNotifier extends Notifier<EstadoSesion> {
   Future<void> _entrar(String token, Usuario persona, bool huella) async {
     _api.token = token;
     await _almacen.guardarSesion(token, persona);
+    final expira = expiracionDelToken(token);
     state = EstadoSesion(
       usuario: persona,
       token: token,
-      expira: expiracionDelToken(token),
+      expira: expira,
       huellaActiva: huella,
       huellaDisponible: state.huellaDisponible,
     );
+    if (persona.rol.tieneJornada) _programarCierre(expira);
   }
 
   Future<void> _limpiar({String? aviso}) async {
+    _cierreAutomatico?.cancel();
+    _cierreAutomatico = null;
     _api.token = null;
     await _almacen.borrarSesion();
     state = EstadoSesion(

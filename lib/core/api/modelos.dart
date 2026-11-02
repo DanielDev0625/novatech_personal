@@ -1,3 +1,5 @@
+import '../formato.dart';
+
 /// Roles del sistema: los mismos que devuelve el backend.
 enum Rol {
   usuario,
@@ -31,6 +33,37 @@ enum Rol {
 
   /// Operario y transportista tienen horario: su sesión vence a la hora de salida.
   bool get tieneJornada => this == Rol.operario || this == Rol.transportista;
+}
+
+/// Pedido tal como aparece en las listas del personal (cola, zona de envíos...).
+class PedidoResumen {
+  const PedidoResumen({
+    required this.id,
+    required this.codigo,
+    required this.estado,
+    required this.cliente,
+    required this.unidades,
+    required this.fechaPrometida,
+    required this.creadoEn,
+  });
+
+  final int id;
+  final String codigo;
+  final String estado;
+  final String? cliente;
+  final int unidades;
+  final DateTime? fechaPrometida;
+  final DateTime? creadoEn;
+
+  factory PedidoResumen.fromJson(Map<String, dynamic> json) => PedidoResumen(
+        id: json['id'] as int,
+        codigo: json['codigo'] as String,
+        estado: json['estado'] as String,
+        cliente: json['cliente'] as String?,
+        unidades: json['unidades'] as int? ?? 0,
+        fechaPrometida: leerFecha(json['fecha_prometida']),
+        creadoEn: leerFecha(json['creado_en']),
+      );
 }
 
 class Usuario {
