@@ -24,6 +24,26 @@ Map<String, dynamic> _parada(int orden, String estado) => {
     };
 
 void main() {
+  test('la parada trae lo que se cobra contra entrega', () {
+    final json = {
+      'orden': 2,
+      'pedido_id': 7,
+      'codigo': 'PED-2026-0007',
+      'cliente': 'Ana',
+      'estado': 'en_ruta',
+      'direccion': {'etiqueta': 'casa', 'texto': 'Cra 43 #84-20', 'latitud': 10.9, 'longitud': -74.8},
+      'distancia_km': 1.2,
+      'km_acumulados': 3.4,
+      'eta_minutos': 12,
+      'total_a_pagar': 1806000,
+    };
+    final parada = Parada.fromJson(json);
+    expect(parada.totalAPagar, 1806000);
+    expect(pesos(parada.totalAPagar), '\$ 1.806.000');
+    // Un servidor viejo sin el campo no rompe nada.
+    expect(Parada.fromJson({...json}..remove('total_a_pagar')).totalAPagar, 0);
+  });
+
   group('Ruta', () {
     test('las paradas quedan en orden y se sabe si se puede iniciar', () {
       final ruta = Ruta.fromJson({

@@ -99,7 +99,8 @@ class _EntregaState extends ConsumerState<_Entrega> {
           icon: const Icon(Icons.check_circle, color: ColoresNovaTech.verde, size: 56),
           title: const Text('Pedido entregado'),
           content: Text(
-            '${parada.codigo} quedó entregado a ${parada.cliente.isEmpty ? 'el cliente' : parada.cliente}.',
+            '${parada.codigo} quedó entregado a ${parada.cliente.isEmpty ? 'el cliente' : parada.cliente}.'
+            '${parada.totalAPagar > 0 ? '\nRecuerda que cobraste ${pesos(parada.totalAPagar)}.' : ''}',
           ),
           actions: [
             FilledButton(
@@ -146,6 +147,7 @@ class _EntregaState extends ConsumerState<_Entrega> {
             ),
           ),
         ),
+        if (parada.totalAPagar > 0) _Cobro(monto: parada.totalAPagar),
         const SizedBox(height: 8),
         ClipRRect(
           borderRadius: BorderRadius.circular(12),
@@ -216,6 +218,48 @@ class _EstadoGps extends StatelessWidget {
         trailing: buscando
             ? null
             : IconButton(tooltip: 'Actualizar ubicación', onPressed: onReintentar, icon: const Icon(Icons.refresh)),
+      ),
+    );
+  }
+}
+
+/// «Cobrar $ 1.806.000 · Pago contra entrega»: el cliente paga al recibir.
+class _Cobro extends StatelessWidget {
+  const _Cobro({required this.monto});
+
+  final double monto;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: ColoresNovaTech.verde.withValues(alpha: 0.08),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: ColoresNovaTech.verde.withValues(alpha: 0.5)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            const Icon(Icons.payments_outlined, color: ColoresNovaTech.verde, size: 30),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Cobrar ${pesos(monto)}',
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: ColoresNovaTech.verde),
+                  ),
+                  const Text(
+                    'Pago contra entrega: productos + envío. Cóbralo antes de escanear el QR.',
+                    style: TextStyle(color: ColoresNovaTech.textoSuave),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

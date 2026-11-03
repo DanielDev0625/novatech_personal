@@ -64,7 +64,7 @@ Pestañas: **Entregas · Ruta · Liquidación**.
 |---|---|
 | Entregas de hoy (inicio) | Paradas numeradas con su estado y los paquetes «Por recibir» de la zona de envíos. «Recibir paquete (escanear QR)» y, con paquetes recibidos, «Iniciar ruta». Mientras hay entregas en ruta comparte la ubicación cada 30 s (con la app abierta). |
 | Ruta | Mapa (OpenStreetMap) con las paradas en orden, «Siguiente parada» con tiempo y distancia, y «Navegar» (abre Google Maps). |
-| Confirmar entrega | Datos de la parada, cámara para el QR que muestra el cliente y verificación «GPS coincide con la dirección guardada» (a menos de 300 m). |
+| Confirmar entrega | Datos de la parada, **«Cobrar $ …»** (el pago es contra entrega: productos + envío), cámara para el QR que muestra el cliente y verificación «GPS coincide con la dirección guardada» (a menos de 300 m). En «Entregas de hoy» cada parada también muestra cuánto cobrar. |
 | Mi liquidación | Pendiente, pagado y total, y el detalle de cada entrega con tarifa y comisión. |
 
 **Probar con datos:** el QR del paquete lleva el **código del pedido** (`PED-0007`); el de entrega es

@@ -38,6 +38,7 @@ class Parada {
     required this.distanciaKm,
     required this.kmAcumulados,
     required this.etaMinutos,
+    this.totalAPagar = 0,
   });
 
   final int orden;
@@ -54,6 +55,9 @@ class Parada {
   /// Minutos estimados hasta llegar a esta parada.
   final int etaMinutos;
 
+  /// Lo que se cobra al entregar: productos + envío (el pago es contra entrega).
+  final double totalAPagar;
+
   /// Recibido del operario pero la ruta aún no empieza.
   bool get porSalir => estado == 'recibido_transportista';
   bool get enRuta => estado == 'en_ruta';
@@ -68,6 +72,7 @@ class Parada {
         distanciaKm: (json['distancia_km'] as num? ?? 0).toDouble(),
         kmAcumulados: (json['km_acumulados'] as num? ?? 0).toDouble(),
         etaMinutos: json['eta_minutos'] as int? ?? 0,
+        totalAPagar: (json['total_a_pagar'] as num? ?? 0).toDouble(),
       );
 }
 

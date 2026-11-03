@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/formato.dart';
 import '../../core/api/cliente_api.dart';
 import '../../core/api/modelos.dart';
 import '../../core/tema/tema.dart';
@@ -128,7 +129,9 @@ class _PantallaEntregasState extends ConsumerState<PantallaEntregas> {
                 _FilaEntrega(
                   numero: '${parada.orden}',
                   codigo: parada.codigo,
-                  direccion: parada.direccion.texto,
+                  direccion: parada.totalAPagar > 0
+                      ? '${parada.direccion.texto} · Cobrar ${pesos(parada.totalAPagar)}'
+                      : parada.direccion.texto,
                   estado: parada.enRuta
                       ? const Insignia(texto: 'En ruta', color: ColoresNovaTech.azul)
                       : const Insignia(texto: 'Por salir', color: ColoresNovaTech.verde),
