@@ -24,7 +24,19 @@ class ApiAdmin {
     required String usuario,
     required String password,
     required Rol rol,
-  }) => _api.post('/usuarios', datos: {'nombre': nombre, 'usuario': usuario, 'password': password, 'rol': rol.name});
+    String? placa,
+    String tipoVehiculo = 'moto',
+  }) => _api.post('/usuarios', datos: {
+    'nombre': nombre,
+    'usuario': usuario,
+    'password': password,
+    'rol': rol.name,
+    // Cada transportista queda con su vehículo; sin placa el servidor le pone una provisional.
+    if (rol == Rol.transportista) ...{
+      if (placa != null && placa.trim().isNotEmpty) 'placa': placa.trim().toUpperCase(),
+      'tipo_vehiculo': tipoVehiculo,
+    },
+  });
 
   Future<void> cambiarEstadoUsuario(int id, {required bool activo}) =>
       _api.patch('/usuarios/$id/estado', datos: {'activo': activo});

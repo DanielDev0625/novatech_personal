@@ -4,7 +4,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:novatech_personal/core/api/cliente_api.dart';
 import 'package:novatech_personal/core/api/modelos.dart';
+import 'package:novatech_personal/core/widgets/codigo_qr.dart';
 import 'package:novatech_personal/core/sesion/pantalla_login.dart';
 import 'package:novatech_personal/core/sesion/sesion.dart';
 import 'package:novatech_personal/core/tema/tema.dart';
@@ -54,6 +56,14 @@ Override _sesion(Rol? rol) => sesionProvider.overrideWith(
               ),
       ),
     );
+
+/// Sin red: responde quién empacó el paquete.
+class _ApiTransportistaFalsa extends ApiTransportista {
+  _ApiTransportistaFalsa() : super(ClienteApi());
+
+  @override
+  Future<String?> empacadoPor(int pedidoId) async => 'Laura Pérez';
+}
 
 /// Tamaño de letra del celular: normal y grande (accesibilidad).
 final _letra = ValueVariant<double>({1.0, 1.3});
@@ -145,6 +155,7 @@ void main() {
   testWidgets('Transportista · Entregas de hoy', (tester) async {
     await _mostrar(tester, const PantallaEntregas(), [
       _sesion(Rol.transportista),
+      apiTransportistaProvider.overrideWithValue(_ApiTransportistaFalsa()),
       zonaEnviosProvider.overrideWith((ref) async => [_pedido]),
       rutaProvider.overrideWith(
         (ref) async => Ruta.fromJson({
@@ -173,6 +184,13 @@ void main() {
     expect(find.text('Por salir'), findsOneWidget);
     expect(find.text('Por recibir'), findsOneWidget);
     expect(find.text('Iniciar ruta'), findsOneWidget);
+    // Sin etiqueta impresa: al tocar el paquete se ve su QR y quién lo empacó.
+    expect(find.text('Toca un paquete para ver su QR y recibirlo.'), findsOneWidget);
+    await tester.tap(find.text('Por recibir'));
+    await tester.pumpAndSettle();
+    expect(find.byType(CodigoQr), findsOneWidget);
+    expect(find.text('Empacado por Laura Pérez'), findsOneWidget);
+    expect(find.text('Recibir y continuar con mi ruta'), findsOneWidget);
   }, variant: _letra);
 
   testWidgets('Gerente · Panel del día', (tester) async {
@@ -272,7 +290,7 @@ void main() {
       _sesion(Rol.administrador),
       usuariosProvider.overrideWith(
         (ref) async => const [
-          Usuario(id: 2, nombre: 'Marco Gil', usuario: 'marco', rol: Rol.transportista, activo: true),
+          Usuario(id: 2, nombre: 'Marco Gil', usuario: 'marco', rol: Rol.transportista, activo: true, placa: 'ABC123'),
           Usuario(id: 3, nombre: 'Ana Soto', usuario: 'ana', rol: Rol.gerente, activo: false),
         ],
       ),
@@ -280,6 +298,15 @@ void main() {
     expect(find.text('MG'), findsOneWidget);
     expect(find.text('Transportista'), findsOneWidget);
     expect(find.text('Crear cuenta del personal'), findsOneWidget);
+    expect(find.text('ABC123'), findsOneWidget);
+    // Al crear un transportista se pide el vehículo de su cuenta.
+    await tester.tap(find.text('Crear cuenta del personal'));
+    await tester.pumpAndSettle();
+    expect(find.text('Vehículo'), findsNothing);
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Transportista'));
+    await tester.pumpAndSettle();
+    expect(find.text('Vehículo'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, 'Camioneta'), findsOneWidget);
   }, variant: _letra);
 
   testWidgets('Administrador · Parámetros', (tester) async {

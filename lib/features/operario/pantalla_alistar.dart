@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/api/cliente_api.dart';
 import '../../core/tema/tema.dart';
 import '../../core/widgets/adaptable.dart';
+import '../../core/widgets/codigo_qr.dart';
 import '../../core/widgets/componentes.dart';
 import '../../core/widgets/escaner.dart';
 import '../../core/widgets/scaffold_rol.dart';
@@ -105,6 +106,30 @@ class _AlistamientoState extends ConsumerState<_Alistamiento> {
     });
   }
 
+  /// Sin etiqueta impresa: el QR del producto (su SKU) se ve en pantalla y un botón
+  /// confirma que se empacaron sus unidades.
+  Future<void> _verQr(LineaPedido linea) async {
+    final faltan = linea.cantidad - _conteo.escaneados(linea.productoId);
+    final ok = await mostrarCodigoQr(
+      context,
+      titulo: 'QR del producto',
+      codigo: linea.sku,
+      detalles: [linea.nombre, 'Llevas ${_conteo.escaneados(linea.productoId)} de ${linea.cantidad}'],
+      accion: faltan == 1 ? 'Confirmar 1 unidad' : 'Confirmar $faltan unidades',
+      iconoAccion: Icons.qr_code_scanner,
+    );
+    if (ok != true || !mounted) return;
+    HapticFeedback.lightImpact();
+    setState(() {
+      while (!_conteo.lineaCompleta(linea)) {
+        _conteo.sumar(linea);
+      }
+      _aviso = '${linea.nombre}: ${linea.cantidad} de ${linea.cantidad}';
+      _avisoBueno = true;
+    });
+    _guardar();
+  }
+
   void _corregir(LineaPedido linea, {required bool sumar}) {
     setState(() {
       sumar ? _conteo.sumar(linea) : _conteo.restar(linea);
@@ -163,6 +188,7 @@ class _AlistamientoState extends ConsumerState<_Alistamiento> {
                   escaneados: _conteo.escaneados(linea.productoId),
                   onMenos: _enviando ? null : () => _corregir(linea, sumar: false),
                   onMas: _enviando ? null : () => _corregir(linea, sumar: true),
+                  onQr: _enviando || _conteo.lineaCompleta(linea) ? null : () => _verQr(linea),
                 ),
               const SizedBox(height: 8),
               ClipRRect(
@@ -174,7 +200,7 @@ class _AlistamientoState extends ConsumerState<_Alistamiento> {
                 duration: const Duration(milliseconds: 200),
                 child: _aviso == null
                     ? const Text(
-                        'Escanea cada unidad o usa + / −',
+                        'Escanea cada unidad, toca el QR del producto o usa + / −',
                         key: ValueKey('ayuda'),
                         textAlign: TextAlign.center,
                         style: TextStyle(color: ColoresNovaTech.textoSuave),
@@ -222,12 +248,19 @@ class _AlistamientoState extends ConsumerState<_Alistamiento> {
 }
 
 class _LineaAlistamiento extends StatelessWidget {
-  const _LineaAlistamiento({required this.linea, required this.escaneados, required this.onMenos, required this.onMas});
+  const _LineaAlistamiento({
+    required this.linea,
+    required this.escaneados,
+    required this.onMenos,
+    required this.onMas,
+    required this.onQr,
+  });
 
   final LineaPedido linea;
   final int escaneados;
   final VoidCallback? onMenos;
   final VoidCallback? onMas;
+  final VoidCallback? onQr;
 
   @override
   Widget build(BuildContext context) {
@@ -254,6 +287,11 @@ class _LineaAlistamiento extends StatelessWidget {
                       Text('SKU ${linea.sku}', style: const TextStyle(color: ColoresNovaTech.textoSuave, fontSize: 13)),
                     ],
                   ),
+                ),
+                IconButton(
+                  tooltip: 'Ver QR del producto',
+                  onPressed: onQr,
+                  icon: const Icon(Icons.qr_code_2),
                 ),
                 Pasos(
                   texto: '$escaneados de ${linea.cantidad}',

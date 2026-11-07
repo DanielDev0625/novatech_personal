@@ -8,6 +8,7 @@ import '../../core/api/modelos.dart';
 import '../../core/tema/tema.dart';
 import '../../core/ubicacion.dart';
 import '../../core/widgets/aviso_salida.dart';
+import '../../core/widgets/codigo_qr.dart';
 import '../../core/widgets/componentes.dart';
 import '../../core/widgets/escaner.dart';
 import '../../core/widgets/scaffold_rol.dart';
@@ -65,8 +66,32 @@ class _PantallaEntregasState extends ConsumerState<PantallaEntregas> {
       await _recargar();
       return;
     }
+    await _recibir(pedido);
+  }
+
+  /// Sin etiqueta impresa: al tocar el paquete aparece su QR en pantalla con quién lo empacó,
+  /// y un botón lo recibe y lo pasa a la ruta.
+  Future<void> _recibirSinEscanear(PedidoResumen pedido) async {
+    final api = ref.read(apiTransportistaProvider);
+    final ok = await mostrarCodigoQr(
+      context,
+      titulo: 'Recibir paquete',
+      codigo: pedido.codigo,
+      detalles: [
+        if (pedido.cliente != null) 'Cliente: ${pedido.cliente}',
+        '${pedido.unidades} ${pedido.unidades == 1 ? 'unidad' : 'unidades'}',
+      ],
+      extra: _EmpacadoPor(nombre: api.empacadoPor(pedido.id)),
+      accion: 'Recibir y continuar con mi ruta',
+      iconoAccion: Icons.local_shipping_outlined,
+    );
+    if (ok != true || !mounted) return;
+    await _recibir(pedido);
+  }
+
+  Future<void> _recibir(PedidoResumen pedido) async {
     await _accion(() async {
-      await ref.read(apiTransportistaProvider).recibirPaquete(pedido.id, codigo, await ubicacionActual());
+      await ref.read(apiTransportistaProvider).recibirPaquete(pedido.id, pedido.codigo, await ubicacionActual());
       if (mounted) mostrarMensaje(context, 'Recibiste el paquete ${pedido.codigo}. Ya está en tu ruta.');
     });
   }
@@ -154,6 +179,7 @@ class _PantallaEntregasState extends ConsumerState<PantallaEntregas> {
                     '${pedido.unidades} ${pedido.unidades == 1 ? 'unidad' : 'unidades'}',
                   ].join(' · '),
                   estado: const Insignia(texto: 'Por recibir', color: ColoresNovaTech.naranja),
+                  onTap: _ocupado ? null : () => _recibirSinEscanear(pedido),
                 ),
             ],
           ),
@@ -169,7 +195,44 @@ class _PantallaEntregasState extends ConsumerState<PantallaEntregas> {
           icon: const Icon(Icons.qr_code_scanner),
           label: const Text('Recibir paquete (escanear QR)'),
         ),
+        if (zona.valueOrNull?.isNotEmpty ?? false)
+          const Padding(
+            padding: EdgeInsets.only(top: 6),
+            child: Text(
+              'Toca un paquete para ver su QR y recibirlo.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: ColoresNovaTech.textoSuave, fontSize: 13),
+            ),
+          ),
       ],
+    );
+  }
+}
+
+/// «Empacado por Laura Pérez»: se consulta al abrir el paquete (una sola petición).
+class _EmpacadoPor extends StatelessWidget {
+  const _EmpacadoPor({required this.nombre});
+
+  final Future<String?> nombre;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<String?>(
+      future: nombre,
+      builder: (context, foto) {
+        final texto = switch (foto) {
+          AsyncSnapshot(connectionState: ConnectionState.waiting) => 'Buscando quién lo empacó…',
+          AsyncSnapshot(hasData: true, :final data?) => 'Empacado por $data',
+          _ => null,
+        };
+        if (texto == null) return const SizedBox.shrink();
+        return Card(
+          child: ListTile(
+            leading: const Icon(Icons.inventory_2_outlined, color: ColoresNovaTech.naranja),
+            title: Text(texto, style: const TextStyle(fontWeight: FontWeight.w700)),
+          ),
+        );
+      },
     );
   }
 }

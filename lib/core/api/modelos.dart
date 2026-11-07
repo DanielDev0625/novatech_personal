@@ -82,6 +82,7 @@ class Usuario {
     required this.usuario,
     required this.rol,
     required this.activo,
+    this.placa,
   });
 
   final int id;
@@ -90,12 +91,16 @@ class Usuario {
   final Rol rol;
   final bool activo;
 
+  /// Solo transportistas: placa del vehículo asociado a la cuenta.
+  final String? placa;
+
   factory Usuario.fromJson(Map<String, dynamic> json) => Usuario(
         id: json['id'] as int,
         nombre: json['nombre'] as String,
         usuario: json['usuario'] as String,
         rol: Rol.desde(json['rol'] as String?),
         activo: json['activo'] as bool? ?? true,
+        placa: json['placa'] as String?,
       );
 
   Map<String, dynamic> toJson() => {
@@ -104,6 +109,7 @@ class Usuario {
         'usuario': usuario,
         'rol': rol.name,
         'activo': activo,
+        if (placa != null) 'placa': placa,
       };
 }
 

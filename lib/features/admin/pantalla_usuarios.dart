@@ -103,6 +103,18 @@ class _PantallaUsuariosState extends ConsumerState<PantallaUsuarios> {
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(color: ColoresNovaTech.textoSuave, fontSize: 13),
                                 ),
+                                if (u.placa != null)
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.local_shipping_outlined, size: 15, color: ColoresNovaTech.textoSuave),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        u.placa!,
+                                        style: const TextStyle(color: ColoresNovaTech.textoSuave, fontSize: 13),
+                                      ),
+                                    ],
+                                  ),
                               ],
                             ),
                           ),
@@ -136,7 +148,9 @@ class _CrearCuentaState extends ConsumerState<_CrearCuenta> {
   final _nombre = TextEditingController();
   final _usuario = TextEditingController();
   final _password = TextEditingController();
+  final _placa = TextEditingController();
   Rol _rol = Rol.operario;
+  String _tipoVehiculo = 'moto';
   bool _enviando = false;
   bool _ocultar = true;
   String? _error;
@@ -146,6 +160,7 @@ class _CrearCuentaState extends ConsumerState<_CrearCuenta> {
     _nombre.dispose();
     _usuario.dispose();
     _password.dispose();
+    _placa.dispose();
     super.dispose();
   }
 
@@ -157,12 +172,24 @@ class _CrearCuentaState extends ConsumerState<_CrearCuenta> {
       setState(() => _error = 'Completa nombre, usuario y contraseña.');
       return;
     }
+    final placa = _placa.text.trim();
+    if (_rol == Rol.transportista && placa.isNotEmpty && !RegExp(r'^[A-Za-z0-9-]{5,10}$').hasMatch(placa)) {
+      setState(() => _error = 'La placa debe tener de 5 a 10 letras o números (ej. ABC123).');
+      return;
+    }
     setState(() {
       _enviando = true;
       _error = null;
     });
     try {
-      await ref.read(apiAdminProvider).crearUsuario(nombre: nombre, usuario: usuario, password: password, rol: _rol);
+      await ref.read(apiAdminProvider).crearUsuario(
+        nombre: nombre,
+        usuario: usuario,
+        password: password,
+        rol: _rol,
+        placa: placa,
+        tipoVehiculo: _tipoVehiculo,
+      );
       if (mounted) Navigator.pop(context, nombre);
     } catch (e) {
       if (mounted) setState(() => _error = errorDesde(e).mensaje);
@@ -231,6 +258,45 @@ class _CrearCuentaState extends ConsumerState<_CrearCuenta> {
                     ),
                 ],
               ),
+              if (_rol == Rol.transportista) ...[
+                const SizedBox(height: 16),
+                const Text('Vehículo', style: TextStyle(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: _placa,
+                  enabled: !_enviando,
+                  autocorrect: false,
+                  enableSuggestions: false,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: const InputDecoration(
+                    hintText: 'Placa (ej. ABC123)',
+                    prefixIcon: Icon(Icons.local_shipping_outlined),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Si la dejas vacía se le asigna una placa provisional. El vehículo queda asociado a su cuenta.',
+                  style: TextStyle(color: ColoresNovaTech.textoSuave, fontSize: 13),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    for (final (valor, etiqueta) in const [
+                      ('moto', 'Moto'),
+                      ('carro', 'Carro'),
+                      ('camioneta', 'Camioneta'),
+                      ('camion', 'Camión'),
+                    ])
+                      ChoiceChip(
+                        label: Text(etiqueta),
+                        selected: _tipoVehiculo == valor,
+                        onSelected: _enviando ? null : (_) => setState(() => _tipoVehiculo = valor),
+                      ),
+                  ],
+                ),
+              ],
               if (_error != null) ...[
                 const SizedBox(height: 12),
                 Text(_error!, style: const TextStyle(color: ColoresNovaTech.rojo)),

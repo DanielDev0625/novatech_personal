@@ -31,6 +31,13 @@ class ApiTransportista {
     await _api.post('/pedidos/$pedidoId/recibir-transportista', datos: {'codigo': codigo, ...?posicion?.toJson()});
   }
 
+  /// Nombre del operario que empacó el paquete (el que lo dejó en la zona de envíos).
+  Future<String?> empacadoPor(int pedidoId) async {
+    final pedido = _objeto(await _api.get('/pedidos/$pedidoId'));
+    final eventos = _lista(pedido['eventos'] ?? const []);
+    return eventos.lastWhere((e) => e['estado'] == 'en_zona_envios', orElse: () => const {})['por'] as String?;
+  }
+
   Future<Ruta> ruta() async => Ruta.fromJson(_objeto(await _api.get('/logistica/ruta')));
 
   /// Todos los paquetes recibidos pasan a «en ruta» de una vez.

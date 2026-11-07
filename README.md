@@ -48,7 +48,7 @@ Pestañas: **Tareas · Recepción · Mi jornada**.
 | Pantalla | Qué hace |
 |---|---|
 | Mis tareas (inicio) | Jornada de hoy en el encabezado. «Alistando» con barra de avance arriba; la cola (más antiguos primero) con «Tomar tarea» abajo; acceso a la mercancía por recibir. Aviso «tu jornada termina en N minutos» en los últimos 10 min; al llegar la hora de salida, la sesión se cierra sola. |
-| Alistamiento | Cada producto con su avance y − / +. La cámara lee el QR o el código de barras (el **SKU**); cada lectura suma una unidad. Lo contado se conserva si sales y vuelves. «Listo para envío» solo se activa con todo completo. |
+| Alistamiento | Cada producto con su avance y − / +. La cámara lee el QR o el código de barras (el **SKU**); cada lectura suma una unidad. Sin etiqueta impresa, el botón de QR de cada producto muestra su QR en pantalla y «Confirmar N unidades» lo completa. Lo contado se conserva si sales y vuelves. «Listo para envío» solo se activa con todo completo. |
 | Recepción de mercancía | Compras aprobadas → contar «en buen estado» y «dañadas» con −10, −1, +1, +10. Si todo coincide se crea el lote; si no, queda «con diferencias» para gerencia. |
 | Mi jornada | Entrada real, salida configurada con la barra del día, horas extra con su estado y «Solicitar horas extra» eligiendo día, hora y motivo. |
 
@@ -62,7 +62,7 @@ Pestañas: **Entregas · Ruta · Liquidación**.
 
 | Pantalla | Qué hace |
 |---|---|
-| Entregas de hoy (inicio) | Paradas numeradas con su estado y los paquetes «Por recibir» de la zona de envíos. «Recibir paquete (escanear QR)» y, con paquetes recibidos, «Iniciar ruta». Mientras hay entregas en ruta comparte la ubicación cada 30 s (con la app abierta). |
+| Entregas de hoy (inicio) | Paradas numeradas con su estado y los paquetes «Por recibir» de la zona de envíos. «Recibir paquete (escanear QR)»; sin etiqueta impresa, al tocar el paquete se ve su QR en pantalla con «Empacado por …» y el botón «Recibir y continuar con mi ruta». Con paquetes recibidos, «Iniciar ruta». Mientras hay entregas en ruta comparte la ubicación cada 30 s (con la app abierta). |
 | Ruta | Mapa (OpenStreetMap) con las paradas en orden, «Siguiente parada» con tiempo y distancia, y «Navegar» (abre Google Maps). |
 | Confirmar entrega | Datos de la parada, **«Cobrar $ …»** (el pago es contra entrega: productos + envío), cámara para el QR que muestra el cliente y verificación «GPS coincide con la dirección guardada» (a menos de 300 m). En «Entregas de hoy» cada parada también muestra cuánto cobrar. |
 | Mi liquidación | Pendiente, pagado y total, y el detalle de cada entrega con tarifa y comisión. |
@@ -90,7 +90,7 @@ Pestañas: **Usuarios · Parámetros · Inventario · Catálogo · Stats**.
 
 | Pantalla | Qué hace |
 |---|---|
-| Usuarios y roles | Cuentas del personal con su rol y un interruptor para activar o desactivar (no la propia). «Crear cuenta del personal»: nombre, usuario y contraseña inicial, y el rol se elige. |
+| Usuarios y roles | Cuentas del personal con su rol y un interruptor para activar o desactivar (no la propia). «Crear cuenta del personal»: nombre, usuario y contraseña inicial, y el rol se elige. Un transportista queda con su **vehículo** asociado (placa y tipo; sin placa recibe una provisional `NT-0007`), y su placa se ve en la lista. |
 | Parámetros | Con − / +: tarifa por kWh, factor CO₂, alerta de consumo, tope de horas extra, margen, plazos de compra y entrega, tarifa y comisión del transportista y tiempos esperados; jornada con selector de hora. Solo se envía lo que cambió. |
 | Zonas y equipos | Zonas con su potencia total, equipos con interruptor y creación de zonas y equipos (potencia con − / +, «en jornada» o «continuo»). |
 | Bitácora | Aprobaciones, horarios e intentos de ingreso fuera de horario. |
